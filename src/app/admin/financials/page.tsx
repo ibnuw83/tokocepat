@@ -289,6 +289,70 @@ export default function FinancialsPage() {
         }
     };
 
+    const handleDownloadProfitLoss = () => {
+        try {
+            const doc = new jsPDF();
+            const storeName = localStorage.getItem("storeName") || "Toko Anda";
+
+            // --- Data Calculation ---
+            const cogs = transactions.reduce((sum, trx) => {
+                return sum + trx.details.reduce((itemSum, item) => {
+                    // Fallback to 0 if costPrice is not available
+                    const cost = item.costPrice || 0;
+                    return itemSum + (cost * item.quantity);
+                }, 0);
+            }, 0);
+
+            const grossProfit = totalRevenue - cogs;
+            const netProfit = grossProfit - totalExpenses;
+
+            // --- PDF Generation ---
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("Laporan Laba Rugi", 105, 15, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            doc.text(storeName, 105, 22, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.text(`Untuk Periode Yang Berakhir: ${format(new Date(), "dd MMMM yyyy", { locale: id })}`, 105, 28, { align: "center" });
+            
+            doc.autoTable({
+                startY: 40,
+                head: [['Deskripsi', 'Jumlah']],
+                body: [
+                    ['Pendapatan Penjualan', formatCurrency(totalRevenue)],
+                    ['Harga Pokok Penjualan (HPP)', `(${formatCurrency(cogs)})`],
+                    [{ content: 'Laba Kotor', styles: { fontStyle: 'bold' } }, { content: formatCurrency(grossProfit), styles: { fontStyle: 'bold' } }],
+                    ['', ''], // Spacer row
+                    [{ content: 'Beban Operasional', styles: { fontStyle: 'bold' } }, ''],
+                    ...expenses.map(exp => [exp.description, `(${formatCurrency(exp.amount)})`]),
+                     [{ content: 'Total Beban Operasional', styles: { fontStyle: 'bold' } }, `(${formatCurrency(totalExpenses)})`],
+                ],
+                foot: [
+                    [{ content: 'LABA BERSIH', styles: { fontStyle: 'bold', halign: 'right' } }, { content: formatCurrency(netProfit), styles: { fontStyle: 'bold' } }]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [56, 30, 114] },
+                footStyles: { fillColor: [238, 238, 238], textColor: [0, 0, 0] },
+                columnStyles: { 1: { halign: 'right' } }
+            });
+
+
+            doc.save(`laba-rugi-${storeName.replace(/\s/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+            toast({ title: "Unduh Berhasil", description: "Laporan laba rugi PDF telah dibuat." });
+
+        } catch (error) {
+            console.error("Gagal mengunduh laba rugi PDF", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Mengunduh",
+                description: "Terjadi kesalahan saat membuat file laba rugi PDF.",
+            });
+        }
+    };
+
 
   return (
     <>
@@ -299,10 +363,16 @@ export default function FinancialsPage() {
                 <h1 className="text-3xl font-bold font-headline">Laporan Keuangan</h1>
                 <p className="text-muted-foreground">Ringkasan, catatan modal, dan pengeluaran toko Anda.</p>
             </div>
-            <Button variant="outline" onClick={handleDownloadBalanceSheet}>
-                <Download className="mr-2 h-4 w-4" />
-                Unduh Neraca (PDF)
-            </Button>
+            <div className="flex gap-2">
+                <Button variant="outline" onClick={handleDownloadProfitLoss}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Unduh Laba Rugi (PDF)
+                </Button>
+                <Button variant="outline" onClick={handleDownloadBalanceSheet}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Unduh Neraca (PDF)
+                </Button>
+            </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
@@ -449,5 +519,3 @@ export default function FinancialsPage() {
     </>
   );
 }
-
-    

@@ -30,6 +30,7 @@ const itemSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Nama barang tidak boleh kosong"),
   price: z.coerce.number().min(0, "Harga harus positif"),
+  costPrice: z.coerce.number().min(0),
   quantity: z.coerce.number().min(1, "Jumlah minimal 1"),
 });
 
@@ -52,6 +53,7 @@ export default function PosPage() {
       id: "",
       name: "",
       price: 0,
+      costPrice: 0,
       quantity: 1,
     },
   });
@@ -182,6 +184,7 @@ export default function PosPage() {
             id: data.id,
             name: data.name,
             price: data.price,
+            costPrice: data.costPrice,
             quantity: data.quantity,
         };
         setItems((prev) => [...prev, newItem]);
@@ -190,7 +193,7 @@ export default function PosPage() {
             description: `${data.name} telah ditambahkan ke transaksi.`,
         });
     }
-    form.reset({ id: "", name: "", price: 0, quantity: 1 });
+    form.reset({ id: "", name: "", price: 0, costPrice: 0, quantity: 1 });
   }
 
   function handleRemoveItem(id: string) {
@@ -307,6 +310,7 @@ export default function PosPage() {
     form.setValue("id", item.id);
     form.setValue("name", item.name);
     form.setValue("price", item.price);
+    form.setValue("costPrice", item.costPrice);
   };
 
   const formatCurrency = (amount: number) => {

@@ -4,6 +4,7 @@ export interface Item {
   name: string;
   price: number;
   quantity: number;
+  costPrice: number; // Menambahkan harga pokok
 }
 
 export interface Transaction {
