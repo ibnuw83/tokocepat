@@ -21,6 +21,9 @@ import { AiSuggestions } from "@/components/AiSuggestions";
 import { ReceiptDialog } from "@/components/ReceiptDialog";
 import { AdminLayout } from "@/components/AdminLayout";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
+import type { InventoryItem } from "@/app/admin/inventory/page";
+import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
+
 
 const itemSchema = z.object({
   name: z.string().min(1, "Nama barang tidak boleh kosong"),
@@ -35,6 +38,7 @@ export default function PosPage() {
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
   const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
+  const [inventory, setInventory] = React.useState<InventoryItem[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -60,39 +64,34 @@ export default function PosPage() {
     if (isMounted) {
       try {
         const storedItems = localStorage.getItem("pos-items");
-        if (storedItems) {
-          setItems(JSON.parse(storedItems));
-        }
+        if (storedItems) setItems(JSON.parse(storedItems));
+        
         const storedDiscount = localStorage.getItem("pos-discount");
-        if (storedDiscount) {
-          setDiscount(JSON.parse(storedDiscount));
-        }
+        if (storedDiscount) setDiscount(JSON.parse(storedDiscount));
+        
         const storedDiscountType = localStorage.getItem("pos-discount-type");
-        if (storedDiscountType) {
-          setDiscountType(JSON.parse(storedDiscountType));
-        }
+        if (storedDiscountType) setDiscountType(JSON.parse(storedDiscountType));
+        
+        const storedInventory = localStorage.getItem("inventoryItems");
+        if (storedInventory) setInventory(JSON.parse(storedInventory));
+
       } catch (error) {
         console.error("Failed to load data from localStorage", error);
+        toast({ variant: "destructive", title: "Gagal Memuat Data", description: "Tidak dapat memuat data dari penyimpanan lokal."});
       }
     }
-  }, [isMounted]);
+  }, [isMounted, toast]);
 
   React.useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem("pos-items", JSON.stringify(items));
-    }
+    if (isMounted) localStorage.setItem("pos-items", JSON.stringify(items));
   }, [items, isMounted]);
 
   React.useEffect(() => {
-     if (isMounted) {
-      localStorage.setItem("pos-discount", JSON.stringify(discount));
-     }
+     if (isMounted) localStorage.setItem("pos-discount", JSON.stringify(discount));
   }, [discount, isMounted]);
 
   React.useEffect(() => {
-     if (isMounted) {
-      localStorage.setItem("pos-discount-type", JSON.stringify(discountType));
-     }
+     if (isMounted) localStorage.setItem("pos-discount-type", JSON.stringify(discountType));
   }, [discountType, isMounted]);
 
 
@@ -112,16 +111,32 @@ export default function PosPage() {
   }, [subtotal, discountAmount]);
 
   function handleAddItem(data: z.infer<typeof itemSchema>) {
-    const newItem: Item = {
-      id: new Date().toISOString(),
-      ...data,
-    };
-    setItems((prev) => [...prev, newItem]);
-    toast({
-      title: "Barang Ditambahkan",
-      description: `${data.name} telah ditambahkan ke transaksi.`,
-    });
-    form.reset();
+    const existingItem = items.find(item => item.name === data.name && item.price === data.price);
+
+    if (existingItem) {
+        // If item exists, just update its quantity
+        setItems(prev => prev.map(item => 
+            item.id === existingItem.id 
+            ? { ...item, quantity: item.quantity + data.quantity } 
+            : item
+        ));
+         toast({
+            title: "Jumlah Diperbarui",
+            description: `Jumlah ${data.name} telah diperbarui di keranjang.`,
+        });
+    } else {
+        // If item does not exist, add as a new item
+        const newItem: Item = {
+            id: new Date().toISOString(),
+            ...data,
+        };
+        setItems((prev) => [...prev, newItem]);
+        toast({
+            title: "Barang Ditambahkan",
+            description: `${data.name} telah ditambahkan ke transaksi.`,
+        });
+    }
+    form.reset({ name: "", price: 0, quantity: 1 });
   }
 
   function handleRemoveItem(id: string) {
@@ -158,15 +173,28 @@ export default function PosPage() {
   }
   
   function handleBarcodeScanned(decodedText: string) {
-    // Assuming barcode is the item name for now
-    // In a real app, you'd likely fetch item details from a database using the barcode
-    form.setValue("name", decodedText);
-    toast({
-        title: "Barcode Terdeteksi",
-        description: `Kode: ${decodedText}. Silakan lengkapi detail barang.`,
-    });
+    const foundItem = inventory.find(item => item.barcode === decodedText);
+    if (foundItem) {
+        form.setValue("name", foundItem.name);
+        form.setValue("price", foundItem.price);
+        toast({
+            title: "Barang Ditemukan",
+            description: `${foundItem.name} ditambahkan. Silakan atur jumlah.`,
+        });
+    } else {
+         toast({
+            variant: "destructive",
+            title: "Barang Tidak Ditemukan",
+            description: `Barcode ${decodedText} tidak cocok dengan barang manapun.`,
+        });
+    }
     setScannerOpen(false);
   }
+
+  const handleItemSelect = (item: InventoryItem) => {
+    form.setValue("name", item.name);
+    form.setValue("price", item.price);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -260,7 +288,7 @@ export default function PosPage() {
               <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
-                        <CardTitle className="font-headline flex items-center gap-3"><PlusCircle className="text-primary"/>Tambah Barang Baru</CardTitle>
+                        <CardTitle className="font-headline flex items-center gap-3"><PlusCircle className="text-primary"/>Tambah Barang</CardTitle>
                         <Button variant="outline" onClick={() => setScannerOpen(true)}>
                             <ScanBarcode className="mr-2 h-4 w-4" />
                             Scan Barcode
@@ -270,19 +298,26 @@ export default function PosPage() {
                 <CardContent>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleAddItem)} className="grid md:grid-cols-4 gap-4 items-end">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Nama Barang / Kode</FormLabel>
-                            <FormControl>
-                              <Input placeholder="cth: Kopi Susu atau 899..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="md:col-span-2">
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Cari Nama Barang</FormLabel>
+                                <FormControl>
+                                    <ItemSearchComboBox
+                                        inventory={inventory}
+                                        onItemSelect={handleItemSelect}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                      </div>
                       <FormField
                         control={form.control}
                         name="price"
@@ -290,7 +325,7 @@ export default function PosPage() {
                           <FormItem>
                             <FormLabel>Harga</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="cth: 18000" {...field} />
+                              <Input type="number" placeholder="cth: 18000" {...field} readOnly/>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
