@@ -24,6 +24,7 @@ import type { InventoryItem } from "@/app/admin/inventory/page";
 import type { Customer } from "@/app/admin/customers/page";
 import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
+import { Separator } from "@/components/ui/separator";
 
 
 const itemSchema = z.object({
@@ -38,6 +39,7 @@ export default function PosPage() {
   const [items, setItems] = React.useState<Item[]>([]);
   const [discount, setDiscount] = React.useState(0);
   const [discountType, setDiscountType] = React.useState<"percentage" | "fixed">("fixed");
+  const [paymentAmount, setPaymentAmount] = React.useState(0);
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
   const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -120,8 +122,15 @@ export default function PosPage() {
   }, [subtotal, discount, discountType]);
 
   const total = React.useMemo(() => {
-    return subtotal - discountAmount;
+    const calculatedTotal = subtotal - discountAmount;
+    return Math.max(0, calculatedTotal);
   }, [subtotal, discountAmount]);
+
+  const changeAmount = React.useMemo(() => {
+    if (paymentAmount <= 0 || paymentAmount < total) return 0;
+    return paymentAmount - total;
+  }, [paymentAmount, total]);
+
 
   function handleAddItem(data: z.infer<typeof itemSchema>) {
     if (!data.id) {
@@ -221,6 +230,7 @@ export default function PosPage() {
     setItems([]);
     setDiscount(0);
     setDiscountType("fixed");
+    setPaymentAmount(0);
     setSelectedCustomer(null);
     form.reset({ id: "", name: "", price: 0, quantity: 1 });
     localStorage.removeItem("pos-items");
@@ -315,6 +325,33 @@ export default function PosPage() {
       </div>
     );
   }
+
+  const getQuickPaymentOptions = (totalAmount: number) => {
+    const options = new Set<number>();
+    options.add(totalAmount); // Uang Pas
+
+    const denominations = [10000, 20000, 50000, 100000];
+    denominations.forEach(denom => {
+      if (denom > totalAmount) {
+        options.add(denom);
+      }
+    });
+    
+    if (totalAmount > 10000 && totalAmount < 50000) {
+       options.add(50000);
+    }
+     if (totalAmount > 50000 && totalAmount < 100000) {
+       options.add(100000);
+    }
+    
+    // Find next highest denomination
+    const nextHighest = denominations.find(d => d > totalAmount);
+    if(nextHighest) options.add(nextHighest);
+
+
+    return Array.from(options).sort((a,b) => a - b).slice(0, 4);
+  }
+
 
   return (
     <>
@@ -463,7 +500,7 @@ export default function PosPage() {
               </Card>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 lg:sticky lg:top-8">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline flex items-center gap-3"><FileText className="text-primary"/>Ringkasan Pesanan</CardTitle>
@@ -481,8 +518,9 @@ export default function PosPage() {
                         value={discount}
                         onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                         className="flex-grow"
+                        disabled={items.length === 0}
                       />
-                      <Select value={discountType} onValueChange={(value: "percentage" | "fixed") => setDiscountType(value)}>
+                      <Select value={discountType} onValueChange={(value: "percentage" | "fixed") => setDiscountType(value)} disabled={items.length === 0}>
                         <SelectTrigger className="w-[100px]">
                           <SelectValue />
                         </SelectTrigger>
@@ -497,14 +535,37 @@ export default function PosPage() {
                     <span>Total Diskon</span>
                     <span>- {formatCurrency(discountAmount)}</span>
                   </div>
-                  <hr/>
+                  <Separator/>
                   <div className="flex justify-between text-xl font-bold font-headline">
                     <span>Total</span>
                     <span>{formatCurrency(total)}</span>
                   </div>
+                  <Separator/>
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-amount">Jumlah Bayar</Label>
+                       <Input
+                        id="payment-amount"
+                        type="number"
+                        placeholder="Masukkan nominal pembayaran"
+                        value={paymentAmount || ""}
+                        onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                        disabled={items.length === 0}
+                      />
+                      <div className="flex gap-2 pt-1">
+                          {getQuickPaymentOptions(total).map(opt => (
+                            <Button key={opt} variant="outline" size="sm" onClick={() => setPaymentAmount(opt)} disabled={items.length === 0}>
+                              {formatCurrency(opt)}
+                            </Button>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-between font-semibold text-base">
+                      <span>Kembalian</span>
+                       <span className={changeAmount > 0 ? "text-green-500" : ""}>{formatCurrency(changeAmount)}</span>
+                    </div>
                 </CardContent>
                 <CardFooter>
-                   <Button size="lg" className="w-full transition-transform active:scale-95" onClick={() => setReceiptOpen(true)} disabled={items.length === 0}>
+                   <Button size="lg" className="w-full transition-transform active:scale-95" onClick={() => setReceiptOpen(true)} disabled={items.length === 0 || paymentAmount < total}>
                     <Printer className="mr-2 h-5 w-5"/> Proses & Buat Struk
                    </Button>
                 </CardFooter>
@@ -522,6 +583,8 @@ export default function PosPage() {
         subtotal={subtotal}
         discountAmount={discountAmount}
         total={total}
+        paymentAmount={paymentAmount}
+        changeAmount={changeAmount}
         formatCurrency={formatCurrency}
         onConfirm={finalizeTransaction}
       />

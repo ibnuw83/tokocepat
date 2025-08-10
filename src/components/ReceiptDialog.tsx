@@ -21,12 +21,26 @@ interface ReceiptDialogProps {
   subtotal: number;
   discountAmount: number;
   total: number;
+  paymentAmount: number;
+  changeAmount: number;
   formatCurrency: (amount: number) => string;
   onConfirm: () => void;
   customerName: string;
 }
 
-export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount, total, formatCurrency, onConfirm, customerName }: ReceiptDialogProps) {
+export function ReceiptDialog({ 
+  isOpen, 
+  onClose, 
+  items, 
+  subtotal, 
+  discountAmount, 
+  total, 
+  paymentAmount, 
+  changeAmount, 
+  formatCurrency, 
+  onConfirm, 
+  customerName 
+}: ReceiptDialogProps) {
   
   // CSS for thermal printer styling
   const printStyles = `
@@ -138,6 +152,15 @@ export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount
             <div className="flex justify-between font-bold text-base print-total">
                 <p>Total</p>
                 <p>{formatCurrency(total)}</p>
+            </div>
+             <Separator className="my-2 print-separator"/>
+             <div className="flex justify-between text-sm">
+                <p>Jumlah Bayar</p>
+                <p>{formatCurrency(paymentAmount)}</p>
+            </div>
+             <div className="flex justify-between text-sm">
+                <p>Kembalian</p>
+                <p>{formatCurrency(changeAmount)}</p>
             </div>
             </div>
             <Separator className="my-4 print-separator"/>
