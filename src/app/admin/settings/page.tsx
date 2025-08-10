@@ -311,14 +311,16 @@ export default function SettingsPage() {
             <Accordion type="multiple" className="w-full">
                  {Object.entries(categories).map(([category, subcategories]) => (
                     <AccordionItem value={category} key={category}>
-                        <AccordionTrigger className="flex justify-between items-center w-full hover:no-underline">
-                           <div className="flex items-center gap-2">
-                                <span className="font-semibold">{category}</span>
-                                <Badge variant="secondary">{Array.isArray(subcategories) ? subcategories.length : 0} sub</Badge>
-                           </div>
+                        <div className="flex justify-between items-center w-full py-4">
+                            <AccordionTrigger className="flex-grow p-0 hover:no-underline">
+                               <div className="flex items-center gap-2">
+                                    <span className="font-semibold">{category}</span>
+                                    <Badge variant="secondary">{Array.isArray(subcategories) ? subcategories.length : 0} sub</Badge>
+                               </div>
+                            </AccordionTrigger>
                              <AlertDialog>
-                                <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8">
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8 ml-2">
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
@@ -337,7 +339,7 @@ export default function SettingsPage() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
-                        </AccordionTrigger>
+                        </div>
                         <AccordionContent>
                            <div className="pl-4 space-y-3">
                                 <div className="space-y-2">
