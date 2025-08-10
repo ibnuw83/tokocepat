@@ -314,7 +314,7 @@ export default function SettingsPage() {
                         <AccordionTrigger className="flex justify-between items-center w-full hover:no-underline">
                            <div className="flex items-center gap-2">
                                 <span className="font-semibold">{category}</span>
-                                <Badge variant="secondary">{subcategories.length} sub</Badge>
+                                <Badge variant="secondary">{Array.isArray(subcategories) ? subcategories.length : 0} sub</Badge>
                            </div>
                              <AlertDialog>
                                 <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -353,7 +353,7 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 pt-2">
-                                    {subcategories.length > 0 ? subcategories.map(sc => (
+                                    {Array.isArray(subcategories) && subcategories.length > 0 ? subcategories.map(sc => (
                                          <Badge key={sc} variant="outline" className="text-sm py-1 px-2 flex items-center gap-2">
                                             {sc}
                                             <button 
