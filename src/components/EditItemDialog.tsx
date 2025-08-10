@@ -40,10 +40,21 @@ const formSchema = z.object({
 
 export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialogProps) {
   const { toast } = useToast();
+  const [categories, setCategories] = React.useState<string[]>([]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: item,
   });
+
+  // Load categories from localStorage when the dialog is open
+  React.useEffect(() => {
+    if (isOpen) {
+      const savedCategories = localStorage.getItem("storeCategories");
+      if (savedCategories) {
+        setCategories(JSON.parse(savedCategories));
+      }
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (item) {
@@ -102,17 +113,16 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Kategori</FormLabel>
-                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Pilih kategori" />
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Minuman">Minuman</SelectItem>
-                                        <SelectItem value="Makanan">Makanan</SelectItem>
-                                        <SelectItem value="Snack">Snack</SelectItem>
-                                        <SelectItem value="Lainnya">Lainnya</SelectItem>
+                                        {categories.map(cat => (
+                                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

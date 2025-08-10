@@ -5,7 +5,7 @@ import * as React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ScanBarcode } from 'lucide-react';
+import { ScanBarcode, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,8 @@ interface AddItemDialogProps {
 
 export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarcodeSetter }: AddItemDialogProps) {
   const { toast } = useToast();
+  const [categories, setCategories] = React.useState<string[]>([]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,6 +55,16 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
       lowStockThreshold: 5,
     },
   });
+
+  // Load categories from localStorage when the dialog is open
+  React.useEffect(() => {
+    if (isOpen) {
+      const savedCategories = localStorage.getItem("storeCategories");
+      if (savedCategories) {
+        setCategories(JSON.parse(savedCategories));
+      }
+    }
+  }, [isOpen]);
 
   // Expose the form's setValue function to the parent component
   React.useEffect(() => {
@@ -143,10 +155,9 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Minuman">Minuman</SelectItem>
-                                        <SelectItem value="Makanan">Makanan</SelectItem>
-                                        <SelectItem value="Snack">Snack</SelectItem>
-                                        <SelectItem value="Lainnya">Lainnya</SelectItem>
+                                        {categories.map(cat => (
+                                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

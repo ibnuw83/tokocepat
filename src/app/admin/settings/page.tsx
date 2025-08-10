@@ -9,15 +9,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Download, UploadCloud } from "lucide-react";
+import { Upload, Download, UploadCloud, PlusCircle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
+
+const defaultCategories = ["Minuman", "Makanan", "Snack", "Lainnya"];
 
 export default function SettingsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [storeName, setStoreName] = React.useState("Toko Cepat");
     const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
     const [logo, setLogo] = React.useState<string | null>(null);
+    const [categories, setCategories] = React.useState<string[]>(defaultCategories);
+    const [newCategory, setNewCategory] = React.useState("");
+
     const router = useRouter();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -32,9 +40,17 @@ export default function SettingsPage() {
             const savedName = localStorage.getItem("storeName");
             const savedAddress = localStorage.getItem("storeAddress");
             const savedLogo = localStorage.getItem("storeLogo");
+            const savedCategories = localStorage.getItem("storeCategories");
+
             if (savedName) setStoreName(savedName);
             if (savedAddress) setStoreAddress(savedAddress);
             if (savedLogo) setLogo(savedLogo);
+            if (savedCategories) {
+                setCategories(JSON.parse(savedCategories));
+            } else {
+                // If no categories are saved, save the default ones
+                 localStorage.setItem("storeCategories", JSON.stringify(defaultCategories));
+            }
         }
     }, [router]);
     
@@ -70,6 +86,7 @@ export default function SettingsPage() {
             if (logo) {
                 localStorage.setItem("storeLogo", logo);
             }
+            localStorage.setItem("storeCategories", JSON.stringify(categories));
              // Dispatch a storage event to notify other components like Sidebar
             window.dispatchEvent(new Event('storage'));
             toast({
@@ -168,6 +185,26 @@ export default function SettingsPage() {
 
         reader.readAsText(file);
     }
+
+    const handleAddCategory = () => {
+        if (newCategory && !categories.includes(newCategory)) {
+            const updatedCategories = [...categories, newCategory];
+            setCategories(updatedCategories);
+            localStorage.setItem("storeCategories", JSON.stringify(updatedCategories));
+            setNewCategory("");
+            toast({ title: "Kategori Ditambahkan", description: `"${newCategory}" telah ditambahkan.`});
+        } else if (categories.includes(newCategory)) {
+            toast({ variant: "destructive", title: "Gagal", description: "Kategori tersebut sudah ada."});
+        }
+    };
+
+    const handleDeleteCategory = (categoryToDelete: string) => {
+        const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
+        setCategories(updatedCategories);
+        localStorage.setItem("storeCategories", JSON.stringify(updatedCategories));
+        toast({ variant: "destructive", title: "Kategori Dihapus", description: `"${categoryToDelete}" telah dihapus.`});
+    };
+
     
   return (
     <AdminLayout>
@@ -209,6 +246,66 @@ export default function SettingsPage() {
           </CardContent>
           <CardFooter>
             <Button onClick={handleSaveChanges}>Simpan Perubahan</Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Manajemen Kategori</CardTitle>
+            <CardDescription>Kelola kategori barang untuk inventaris Anda.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+                <Label htmlFor="new-category">Tambah Kategori Baru</Label>
+                <div className="flex gap-2 mt-2">
+                    <Input 
+                        id="new-category" 
+                        value={newCategory} 
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="cth: Makanan Berat"
+                    />
+                    <Button onClick={handleAddCategory}>
+                        <PlusCircle className="mr-2 h-4 w-4"/>
+                        Tambah
+                    </Button>
+                </div>
+            </div>
+            <div>
+                <Label>Kategori Saat Ini</Label>
+                <div className="flex flex-wrap gap-2 mt-2 border rounded-md p-4 bg-muted/50 min-h-[80px] items-center">
+                    {categories.length > 0 ? categories.map(cat => (
+                       <Badge key={cat} variant="secondary" className="text-base py-1 px-3 flex items-center gap-2">
+                           {cat}
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <button className="rounded-full hover:bg-destructive/20 text-destructive">
+                                   <X className="h-3 w-3" />
+                               </button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Yakin Ingin Menghapus Kategori?</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Tindakan ini akan menghapus kategori "{cat}". Ini tidak akan mengubah kategori barang yang sudah ada.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Batal</AlertDialogCancel>
+                                 <AlertDialogAction onClick={() => handleDeleteCategory(cat)}>
+                                   Ya, Hapus
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                       </Badge>
+                    )) : (
+                        <p className="text-sm text-muted-foreground">Belum ada kategori.</p>
+                    )}
+                </div>
+            </div>
+          </CardContent>
+           <CardFooter>
+            <Button onClick={handleSaveChanges}>Simpan Perubahan Kategori</Button>
           </CardFooter>
         </Card>
 
@@ -257,3 +354,5 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
+
+    
