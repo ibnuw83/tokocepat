@@ -8,8 +8,19 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AddCustomerDialog } from "@/components/AddCustomerDialog";
+import { EditCustomerDialog } from "@/components/EditCustomerDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 
 // Mock data for initial customers, will be replaced by localStorage
@@ -28,6 +39,10 @@ export type Customer = {
 export default function CustomersPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
+    const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+    const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
+    const [customerToEdit, setCustomerToEdit] = React.useState<Customer | null>(null);
     const [customers, setCustomers] = React.useState<Customer[]>([]);
     const [transactions, setTransactions] = React.useState<any[]>([]);
     const router = useRouter();
@@ -93,6 +108,57 @@ export default function CustomersPage() {
             description: `${values.name} telah ditambahkan ke daftar pelanggan.`
         })
     };
+    
+    const handleEditCustomer = (values: Customer) => {
+        const updatedCustomers = customers.map(c => c.id === values.id ? values : c);
+        setCustomers(updatedCustomers);
+        saveCustomersToStorage(updatedCustomers);
+        toast({
+            title: "Pelanggan Diperbarui",
+            description: `Data untuk ${values.name} telah diperbarui.`
+        });
+        setCustomerToEdit(null);
+    }
+
+    const handleOpenEditDialog = (customer: Customer) => {
+        setCustomerToEdit(customer);
+        setEditDialogOpen(true);
+    }
+    
+    const handleOpenDeleteDialog = (customer: Customer) => {
+        setCustomerToDelete(customer);
+        setDeleteDialogOpen(true);
+    }
+
+    const handleConfirmDelete = () => {
+        if (!customerToDelete) return;
+
+        const customerTransactionCount = getCustomerTransactionCount(customerToDelete.id);
+        if (customerTransactionCount > 0) {
+            toast({
+                variant: "destructive",
+                title: "Gagal Menghapus",
+                description: `Pelanggan "${customerToDelete.name}" tidak dapat dihapus karena memiliki riwayat transaksi.`
+            });
+            setDeleteDialogOpen(false);
+            setCustomerToDelete(null);
+            return;
+        }
+
+        const updatedCustomers = customers.filter(c => c.id !== customerToDelete.id);
+        setCustomers(updatedCustomers);
+        saveCustomersToStorage(updatedCustomers);
+
+        toast({
+            variant: "destructive",
+            title: "Pelanggan Dihapus",
+            description: `Pelanggan "${customerToDelete.name}" telah berhasil dihapus.`,
+        });
+
+        setDeleteDialogOpen(false);
+        setCustomerToDelete(null);
+    }
+
 
     const getCustomerTransactionCount = (customerId: string) => {
         return transactions.filter(t => t.customerId === customerId).length;
@@ -140,8 +206,16 @@ export default function CustomersPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>Lihat Detail</DropdownMenuItem>
-                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenEditDialog(customer)}>
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleOpenDeleteDialog(customer)}
+                                      className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                    >
+                                      Hapus
+                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>
@@ -158,6 +232,33 @@ export default function CustomersPage() {
         onClose={() => setAddDialogOpen(false)}
         onSave={handleAddNewCustomer}
     />
+    {customerToEdit && (
+      <EditCustomerDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => {
+              setEditDialogOpen(false);
+              setCustomerToEdit(null);
+          }}
+          customer={customerToEdit}
+          onSave={handleEditCustomer}
+      />
+    )}
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pelanggan
+                    <span className="font-bold"> "{customerToDelete?.name}" </span>
+                    secara permanen.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDelete}>Ya, Hapus</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
