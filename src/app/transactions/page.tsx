@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { AiSuggestions } from "@/components/AiSuggestions";
 import { ReceiptDialog } from "@/components/ReceiptDialog";
-import { AdminLayout } from "@/components/AdminLayout";
+import { CashierLayout } from "@/components/CashierLayout";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 
 const itemSchema = z.object({
@@ -188,7 +188,7 @@ export default function PosPage() {
 
   return (
     <>
-      <AdminLayout>
+      <CashierLayout>
         <main className="flex-grow container mx-auto p-4 md:p-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
@@ -369,7 +369,7 @@ export default function PosPage() {
             </div>
           </div>
         </main>
-      </AdminLayout>
+      </CashierLayout>
 
       <ReceiptDialog
         isOpen={isReceiptOpen}
@@ -388,3 +388,5 @@ export default function PosPage() {
     </>
   );
 }
+
+    
