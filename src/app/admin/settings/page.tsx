@@ -11,11 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
-    const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
+    const [storeName, setStoreName] = React.useState("Toko Cepat");
+    const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
+    const [logo, setLogo] = React.useState<string | null>(null);
     const router = useRouter();
+    const { toast } = useToast();
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -23,6 +27,13 @@ export default function SettingsPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
+            // Load saved settings from localStorage
+            const savedName = localStorage.getItem("storeName");
+            const savedAddress = localStorage.getItem("storeAddress");
+            const savedLogo = localStorage.getItem("storeLogo");
+            if (savedName) setStoreName(savedName);
+            if (savedAddress) setStoreAddress(savedAddress);
+            if (savedLogo) setLogo(savedLogo);
         }
     }, [router]);
     
@@ -43,7 +54,32 @@ export default function SettingsPage() {
     const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
             const file = event.target.files[0];
-            setLogoPreview(URL.createObjectURL(file));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogo(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    const handleSaveChanges = () => {
+        try {
+            localStorage.setItem("storeName", storeName);
+            localStorage.setItem("storeAddress", storeAddress);
+            if (logo) {
+                localStorage.setItem("storeLogo", logo);
+            }
+            toast({
+                title: "Pengaturan Disimpan",
+                description: "Perubahan pada informasi toko telah berhasil disimpan.",
+            });
+        } catch (error) {
+            console.error("Failed to save settings to localStorage", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Menyimpan",
+                description: "Terjadi kesalahan saat menyimpan pengaturan.",
+            });
         }
     }
     
@@ -58,18 +94,18 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="store-name">Nama Toko</Label>
-                <Input id="store-name" defaultValue="Toko Cepat" />
+                <Input id="store-name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
             </div>
              <div className="space-y-2">
                 <Label htmlFor="store-address">Alamat Toko</Label>
-                <Textarea id="store-address" defaultValue="Jl. Jendral Sudirman No. 123, Jakarta" />
+                <Textarea id="store-address" value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} />
             </div>
              <div className="space-y-2">
                 <Label>Logo Toko</Label>
                 <div className="flex items-center gap-4">
                     <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted overflow-hidden">
-                       {logoPreview ? (
-                            <Image src={logoPreview} alt="Logo Preview" width={96} height={96} className="object-contain" />
+                       {logo ? (
+                            <Image src={logo} alt="Logo Preview" width={96} height={96} className="object-contain" />
                         ) : (
                             <span className="text-xs text-muted-foreground text-center">Pratinjau Logo</span>
                         )}
@@ -86,7 +122,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button>Simpan Perubahan</Button>
+            <Button onClick={handleSaveChanges}>Simpan Perubahan</Button>
           </CardFooter>
         </Card>
       </div>
