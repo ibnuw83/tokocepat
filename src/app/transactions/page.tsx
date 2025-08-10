@@ -5,7 +5,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut, ScanBarcode, UserSearch } from "lucide-react";
+import { PlusCircle, Trash2, Printer, X, FileText, ShoppingCart, LogOut, ScanBarcode, UserSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { Item, Transaction } from "@/lib/types";
@@ -17,7 +17,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { AiSuggestions } from "@/components/AiSuggestions";
 import { ReceiptDialog } from "@/components/ReceiptDialog";
 import { AdminLayout } from "@/components/AdminLayout";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
@@ -521,10 +520,6 @@ export default function PosPage() {
                    </Button>
                 </CardFooter>
               </Card>
-              
-              <AiSuggestions
-                cartItems={items.map(i => i.name)}
-              />
             </div>
           </div>
         </main>
