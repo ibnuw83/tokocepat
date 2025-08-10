@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Download, UploadCloud, PlusCircle, Trash2, X } from "lucide-react";
+import { Upload, Download, UploadCloud, PlusCircle, Trash2, X, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { format } from "date-fns";
 
 export type Categories = Record<string, string[]>;
 
@@ -32,6 +33,21 @@ const defaultCategories: Categories = {
     "Hobi & Koleksi": ["Alat Musik", "Koleksi Action Figure", "Alat Seni & Kerajinan", "Produk Gaming", "Kamera & Fotografi"],
 };
 
+const LOCALSTORAGE_KEYS_TO_BACKUP = [
+  "inventoryItems",
+  "customers",
+  "transactions",
+  "capital",
+  "expenses",
+  "app-users",
+  "storeName",
+  "storeAddress",
+  "storeLogo",
+  "storeCategories",
+  "receiptFooter",
+  "receiptPaperSize",
+];
+
 export default function SettingsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [storeName, setStoreName] = React.useState("Toko Cepat");
@@ -46,6 +62,9 @@ export default function SettingsPage() {
     const router = useRouter();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const importFileInputRef = React.useRef<HTMLInputElement>(null);
+    const [isImportAlertOpen, setImportAlertOpen] = React.useState(false);
+    const [fileToImport, setFileToImport] = React.useState<File | null>(null);
 
     const loadSettings = React.useCallback(() => {
         const savedName = localStorage.getItem("storeName");
@@ -164,6 +183,122 @@ export default function SettingsPage() {
         toast({ variant: "destructive", title: "Subkategori Dihapus" });
     };
 
+    const handleExportData = () => {
+        try {
+            const dataToBackup: { [key: string]: any } = {};
+            LOCALSTORAGE_KEYS_TO_BACKUP.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value !== null) {
+                    try {
+                        dataToBackup[key] = JSON.parse(value);
+                    } catch (e) {
+                        dataToBackup[key] = value;
+                    }
+                }
+            });
+
+            const jsonString = JSON.stringify(dataToBackup, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const storeNameForFile = storeName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const dateStamp = format(new Date(), "yyyy-MM-dd");
+            
+            link.href = url;
+            link.download = `tokocepat_backup_${storeNameForFile}_${dateStamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast({
+                title: "Ekspor Berhasil",
+                description: "File backup data Anda telah diunduh.",
+            });
+        } catch (error) {
+            console.error("Failed to export data", error);
+            toast({
+                variant: "destructive",
+                title: "Ekspor Gagal",
+                description: "Terjadi kesalahan saat membuat file backup.",
+            });
+        }
+    };
+
+    const handleImportFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            if (file.type === "application/json") {
+                setFileToImport(file);
+                setImportAlertOpen(true);
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "File Tidak Valid",
+                    description: "Silakan pilih file backup dengan format .json.",
+                });
+            }
+        }
+        // Reset file input value to allow re-selection of the same file
+        if (event.target) {
+            event.target.value = "";
+        }
+    };
+    
+    const handleConfirmImport = () => {
+        if (!fileToImport) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') throw new Error("File content is not readable text.");
+                
+                const dataToImport = JSON.parse(text);
+
+                // Clear existing data for safety
+                LOCALSTORAGE_KEYS_TO_BACKUP.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+
+                // Import new data
+                Object.keys(dataToImport).forEach(key => {
+                    if (LOCALSTORAGE_KEYS_TO_BACKUP.includes(key)) {
+                        const value = typeof dataToImport[key] === 'string'
+                            ? dataToImport[key]
+                            : JSON.stringify(dataToImport[key]);
+                        localStorage.setItem(key, value);
+                    }
+                });
+                
+                // Dispatch storage event to notify all components
+                window.dispatchEvent(new Event('storage'));
+
+                toast({
+                    title: "Impor Berhasil",
+                    description: "Data telah berhasil dipulihkan. Halaman akan dimuat ulang.",
+                });
+                
+                // Reload the page to apply all changes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
+            } catch (error) {
+                 console.error("Failed to import data", error);
+                 toast({
+                    variant: "destructive",
+                    title: "Impor Gagal",
+                    description: "File backup tidak valid atau rusak.",
+                });
+            } finally {
+                setFileToImport(null);
+                setImportAlertOpen(false);
+            }
+        };
+        reader.readAsText(fileToImport);
+    };
+
     if (!isMounted) {
         return (
              <div className="flex items-center justify-center min-h-screen bg-background">
@@ -179,6 +314,7 @@ export default function SettingsPage() {
     }
     
   return (
+    <>
     <AdminLayout>
       <div className="p-4 md:p-8 space-y-8">
         <Card>
@@ -320,7 +456,62 @@ export default function SettingsPage() {
             </Accordion>
           </CardContent>
         </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Backup & Pulihkan Data</CardTitle>
+                <CardDescription>Simpan semua data aplikasi Anda (barang, transaksi, pengaturan, dll.) ke sebuah file untuk dicadangkan atau dipindahkan ke perangkat lain.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <Button variant="outline" onClick={handleExportData} className="w-full sm:w-auto">
+                        <Download className="mr-2 h-4 w-4" />
+                        Ekspor (Backup) Data
+                    </Button>
+                    <input
+                        type="file"
+                        ref={importFileInputRef}
+                        className="hidden"
+                        accept="application/json"
+                        onChange={handleImportFileSelect}
+                    />
+                    <Button onClick={() => importFileInputRef.current?.click()} className="w-full sm:w-auto">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Impor (Pulihkan) Data
+                    </Button>
+                </div>
+                <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-1" />
+                    <div>
+                        <h4 className="font-semibold text-destructive">Peringatan Penting</h4>
+                        <p className="text-sm text-destructive/90">
+                           Tindakan "Impor" akan **menimpa seluruh data yang ada saat ini** di aplikasi dengan data dari file backup. Pastikan Anda memilih file yang benar.
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
       </div>
     </AdminLayout>
+
+    <AlertDialog open={isImportAlertOpen} onOpenChange={setImportAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Konfirmasi Impor Data</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Apakah Anda yakin ingin melanjutkan? Semua data yang ada saat ini (inventaris, transaksi, pelanggan, dll.) akan **dihapus dan digantikan** dengan data dari file
+                    <span className="font-bold text-foreground"> {fileToImport?.name}</span>.
+                    <br/><br/>
+                    Tindakan ini tidak dapat dibatalkan.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setFileToImport(null)}>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmImport}>Ya, Timpa dan Impor</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
