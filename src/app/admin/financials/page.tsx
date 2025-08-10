@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, PlusCircle, MoreHorizontal } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, PlusCircle, MoreHorizontal, Download } from "lucide-react";
 import { FinancialsEntryDialog } from "@/components/FinancialsEntryDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
@@ -22,6 +22,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import type { Transaction } from "@/lib/types";
+import type { InventoryItem } from "../inventory/page";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+
+// Extend the window interface for autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 
 // Mock data
@@ -80,12 +92,10 @@ export default function FinancialsPage() {
             setIsMounted(true);
             loadDataFromStorage();
             
-            // Initialize with default data if local storage is empty
-            if (!localStorage.getItem("capital")) {
-                saveDataToStorage({ capital: initialCapital });
-            }
-            if (!localStorage.getItem("expenses")) {
-                saveDataToStorage({ expenses: initialExpenses });
+            if (!localStorage.getItem("capital") && !localStorage.getItem("expenses")) {
+                saveDataToStorage({ capital: initialCapital, expenses: initialExpenses });
+                 // Reload to reflect initial data after saving
+                loadDataFromStorage();
             }
 
             window.addEventListener('storage', loadDataFromStorage);
@@ -198,10 +208,103 @@ export default function FinancialsPage() {
     const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
     const netProfit = totalRevenue - totalExpenses;
 
+    const handleDownloadBalanceSheet = () => {
+        try {
+            const doc = new jsPDF();
+            const storeName = localStorage.getItem("storeName") || "Toko Anda";
+
+            // --- Data Calculation ---
+            const storedInventory = localStorage.getItem("inventoryItems");
+            const inventory: InventoryItem[] = storedInventory ? JSON.parse(storedInventory) : [];
+            const inventoryValue = inventory.reduce((sum, item) => sum + (item.stock * item.costPrice), 0);
+            
+            const totalCapital = capital.reduce((sum, item) => sum + item.amount, 0);
+            
+            const cashFromProfit = netProfit;
+            const totalAssets = cashFromProfit + inventoryValue;
+            const totalLiabilitiesAndEquity = totalCapital + netProfit;
+
+            // --- PDF Generation ---
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("Laporan Posisi Keuangan (Neraca)", 105, 15, { align: "center" });
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            doc.text(storeName, 105, 22, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.text(`Per Tanggal: ${format(new Date(), "dd MMMM yyyy", { locale: id })}`, 105, 28, { align: "center" });
+
+            // AKTIVA
+            doc.autoTable({
+                startY: 40,
+                head: [['AKTIVA', '']],
+                body: [
+                    [{ content: 'Aset Lancar', colSpan: 2, styles: { fontStyle: 'bold' } }],
+                    ['Kas (dari Laba)', formatCurrency(cashFromProfit)],
+                    ['Nilai Persediaan', formatCurrency(inventoryValue)],
+                ],
+                foot: [
+                    [{ content: 'TOTAL AKTIVA', styles: { fontStyle: 'bold' } }, { content: formatCurrency(totalAssets), styles: { fontStyle: 'bold' } }]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [56, 30, 114], halign: 'center' },
+                footStyles: { fillColor: [238, 238, 238], textColor: [0, 0, 0] },
+                columnStyles: { 1: { halign: 'right' } },
+                tableWidth: 88,
+                margin: { left: 14 }
+            });
+
+            // PASSIVA
+            doc.autoTable({
+                startY: 40,
+                head: [['PASSIVA', '']],
+                body: [
+                    [{ content: 'Modal (Ekuitas)', colSpan: 2, styles: { fontStyle: 'bold' } }],
+                    ['Modal Disetor', formatCurrency(totalCapital)],
+                    ['Laba Ditahan', formatCurrency(netProfit)],
+                ],
+                foot: [
+                    [{ content: 'TOTAL PASSIVA', styles: { fontStyle: 'bold' } }, { content: formatCurrency(totalLiabilitiesAndEquity), styles: { fontStyle: 'bold' } }]
+                ],
+                theme: 'striped',
+                headStyles: { fillColor: [56, 30, 114], halign: 'center' },
+                footStyles: { fillColor: [238, 238, 238], textColor: [0, 0, 0] },
+                columnStyles: { 1: { halign: 'right' } },
+                tableWidth: 88,
+                margin: { left: 108 }
+            });
+
+            doc.save(`neraca-${storeName.replace(/\s/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+            toast({ title: "Unduh Berhasil", description: "Laporan neraca PDF telah dibuat." });
+
+        } catch (error) {
+            console.error("Gagal mengunduh neraca PDF", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Mengunduh",
+                description: "Terjadi kesalahan saat membuat file neraca PDF.",
+            });
+        }
+    };
+
+
   return (
     <>
     <AdminLayout>
       <div className="p-4 md:p-8 grid gap-8">
+        <div className="flex justify-between items-start">
+            <div>
+                <h1 className="text-3xl font-bold font-headline">Laporan Keuangan</h1>
+                <p className="text-muted-foreground">Ringkasan, catatan modal, dan pengeluaran toko Anda.</p>
+            </div>
+            <Button variant="outline" onClick={handleDownloadBalanceSheet}>
+                <Download className="mr-2 h-4 w-4" />
+                Unduh Neraca (PDF)
+            </Button>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-4">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -257,7 +360,7 @@ export default function FinancialsPage() {
                     <TableBody>
                         {capital.map((cap) => (
                         <TableRow key={cap.id}>
-                            <TableCell>{cap.date}</TableCell>
+                            <TableCell>{new Date(cap.date).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'})}</TableCell>
                             <TableCell>{cap.description}</TableCell>
                             <TableCell className="text-right">{formatCurrency(cap.amount)}</TableCell>
                             <TableCell className="text-right">
@@ -296,7 +399,7 @@ export default function FinancialsPage() {
                     <TableBody>
                         {expenses.map((exp) => (
                         <TableRow key={exp.id}>
-                            <TableCell>{exp.date}</TableCell>
+                            <TableCell>{new Date(exp.date).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'})}</TableCell>
                             <TableCell>{exp.description}</TableCell>
                             <TableCell className="text-right">{formatCurrency(exp.amount)}</TableCell>
                              <TableCell className="text-right">
@@ -346,3 +449,5 @@ export default function FinancialsPage() {
     </>
   );
 }
+
+    
