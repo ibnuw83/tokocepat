@@ -8,27 +8,38 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Mock data for transaction reports
-const transactions = [
-  { id: "TRX001", date: "2024-05-20", total: 150000, items: 3, operator: "Kasir Pagi" },
-  { id: "TRX002", date: "2024-05-20", total: 75000, items: 2, operator: "Kasir Pagi" },
-  { id: "TRX003", date: "2024-05-21", total: 220000, items: 5, operator: "Kasir Malam" },
-];
+import type { Transaction } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function ReportsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
+    const [transactions, setTransactions] = React.useState<Transaction[]>([]);
     const router = useRouter();
+    const { toast } = useToast();
+
+    const loadTransactions = React.useCallback(() => {
+        const storedTransactions = localStorage.getItem("transactions");
+        if (storedTransactions) {
+            setTransactions(JSON.parse(storedTransactions));
+        }
+    }, []);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
         if (isLoggedIn !== "true") {
-        router.push("/login");
+            router.push("/login");
         } else {
-        setIsMounted(true);
+            setIsMounted(true);
+            loadTransactions();
+
+             // Listen for storage changes from other tabs
+            window.addEventListener('storage', loadTransactions);
+            return () => {
+                window.removeEventListener('storage', loadTransactions);
+            };
         }
-    }, [router]);
+    }, [router, loadTransactions]);
     
     if (!isMounted) {
         return (
@@ -47,6 +58,34 @@ export default function ReportsPage() {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     }
+    
+    const handleDownload = () => {
+        try {
+            const jsonString = JSON.stringify(transactions, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `laporan-transaksi-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast({
+                title: "Unduh Berhasil",
+                description: "Laporan transaksi telah berhasil diunduh.",
+            });
+        } catch (error) {
+             console.error("Gagal mengunduh laporan", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Mengunduh",
+                description: "Terjadi kesalahan saat membuat file laporan.",
+            });
+        }
+    }
+
 
   return (
     <AdminLayout>
@@ -58,7 +97,7 @@ export default function ReportsPage() {
                     <CardTitle>Laporan Transaksi</CardTitle>
                     <CardDescription>Lihat riwayat semua transaksi yang telah terjadi.</CardDescription>
                 </div>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleDownload} disabled={transactions.length === 0}>
                     <Download className="mr-2 h-4 w-4" />
                     Unduh Laporan
                 </Button>
@@ -76,15 +115,21 @@ export default function ReportsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {transactions.map((trx) => (
+                    {transactions.length > 0 ? transactions.map((trx) => (
                     <TableRow key={trx.id}>
                         <TableCell className="font-medium">{trx.id}</TableCell>
-                        <TableCell>{trx.date}</TableCell>
+                        <TableCell>{new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</TableCell>
                         <TableCell>{trx.items}</TableCell>
                         <TableCell>{trx.operator}</TableCell>
                         <TableCell className="text-right">{formatCurrency(trx.total)}</TableCell>
                     </TableRow>
-                    ))}
+                    )) : (
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                            Belum ada riwayat transaksi.
+                        </TableCell>
+                    </TableRow>
+                    )}
                 </TableBody>
                 <TableCaption>Total {transactions.length} transaksi.</TableCaption>
             </Table>
@@ -94,3 +139,5 @@ export default function ReportsPage() {
     </AdminLayout>
   );
 }
+
+    

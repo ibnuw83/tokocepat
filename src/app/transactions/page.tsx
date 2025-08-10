@@ -8,7 +8,7 @@ import { z } from "zod";
 import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut, ScanBarcode } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import type { Item } from "@/lib/types";
+import type { Item, Transaction } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -89,7 +89,7 @@ export default function PosPage() {
      loadDataFromStorage();
       // Add event listener to sync inventory data across tabs
       const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === "inventoryItems") {
+        if (e.key === "inventoryItems" || e.key === "transactions") {
           loadDataFromStorage();
         }
       };
@@ -235,7 +235,22 @@ export default function PosPage() {
   }
 
   function finalizeTransaction() {
-    // 1. Update stock in inventory
+     // 1. Save transaction to history
+    const storedTransactions = localStorage.getItem("transactions");
+    const transactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+    const newTransaction: Transaction = {
+      id: `TRX-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      items: items.reduce((sum, item) => sum + item.quantity, 0),
+      total: total,
+      operator: sessionStorage.getItem("username") || "Unknown",
+      details: items,
+    };
+    transactions.unshift(newTransaction); // Add to the beginning of the array
+    localStorage.setItem("transactions", JSON.stringify(transactions));
+
+
+    // 2. Update stock in inventory
     const newInventory = [...inventory];
     let stockUpdated = false;
     items.forEach(cartItem => {
@@ -249,11 +264,12 @@ export default function PosPage() {
     if (stockUpdated) {
         setInventory(newInventory);
         localStorage.setItem("inventoryItems", JSON.stringify(newInventory));
-         // Dispatch storage event to notify other tabs/components (like inventory page)
-        window.dispatchEvent(new Event('storage'));
     }
 
-    // 2. Clear current transaction
+     // 3. Dispatch storage event to notify other tabs/components (like inventory & reports page)
+    window.dispatchEvent(new Event('storage'));
+
+    // 4. Clear current transaction for the next one
     handleNewTransaction();
     setReceiptOpen(false);
     toast({
