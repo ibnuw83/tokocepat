@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Separator } from "@/components/ui/separator";
+import type { DateRange } from "react-day-picker";
 
 // Extend the window interface for autoTable
 declare module 'jspdf' {
@@ -35,7 +36,7 @@ export default function ReportsPage() {
     const [uniqueOperators, setUniqueOperators] = React.useState<string[]>([]);
     
     // Filter states
-    const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
+    const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
     const [selectedOperator, setSelectedOperator] = React.useState<string>("");
 
     const router = useRouter();
@@ -71,8 +72,20 @@ export default function ReportsPage() {
     React.useEffect(() => {
         let items = [...transactions];
 
-        if (selectedDate) {
-            items = items.filter(t => format(new Date(t.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'));
+        if (dateRange?.from) {
+            items = items.filter(t => {
+                const transactionDate = new Date(t.date);
+                const fromDate = new Date(dateRange.from!);
+                fromDate.setHours(0,0,0,0); // Start of the day
+
+                if(dateRange.to) {
+                     const toDate = new Date(dateRange.to);
+                     toDate.setHours(23,59,59,999); // End of the day
+                     return transactionDate >= fromDate && transactionDate <= toDate;
+                }
+                // If only 'from' is selected, filter for that single day
+                return format(transactionDate, 'yyyy-MM-dd') === format(fromDate, 'yyyy-MM-dd');
+            });
         }
 
         if (selectedOperator) {
@@ -80,7 +93,7 @@ export default function ReportsPage() {
         }
 
         setFilteredTransactions(items);
-    }, [selectedDate, selectedOperator, transactions]);
+    }, [dateRange, selectedOperator, transactions]);
 
 
     if (!isMounted) {
@@ -102,7 +115,7 @@ export default function ReportsPage() {
     }
 
     const resetFilters = () => {
-        setSelectedDate(undefined);
+        setDateRange(undefined);
         setSelectedOperator("");
     }
     
@@ -183,19 +196,34 @@ export default function ReportsPage() {
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
+                        id="date"
                         variant={"outline"}
-                        className="w-full sm:w-[240px] justify-start text-left font-normal"
+                        className="w-full sm:w-auto justify-start text-left font-normal"
                         >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+                        {dateRange?.from ? (
+                            dateRange.to ? (
+                            <>
+                                {format(dateRange.from, "LLL dd, y", { locale: id })} -{" "}
+                                {format(dateRange.to, "LLL dd, y", { locale: id })}
+                            </>
+                            ) : (
+                                format(dateRange.from, "LLL dd, y", { locale: id })
+                            )
+                        ) : (
+                            <span>Pilih rentang tanggal</span>
+                        )}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
                         initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                        locale={id}
                         />
                     </PopoverContent>
                 </Popover>
@@ -208,7 +236,7 @@ export default function ReportsPage() {
                         {uniqueOperators.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                {(selectedDate || selectedOperator) && (
+                {(dateRange || selectedOperator) && (
                         <Button variant="ghost" onClick={resetFilters} size="icon">
                         <X className="h-4 w-4" />
                         <span className="sr-only">Reset Filter</span>
@@ -252,3 +280,5 @@ export default function ReportsPage() {
     </AdminLayout>
   );
 }
+
+    
