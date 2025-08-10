@@ -43,6 +43,9 @@ export function ItemSearchComboBox({ inventory, onItemSelect, value, onChange }:
     setOpen(false);
   }
 
+  // Filter out items that are out of stock
+  const availableItems = inventory.filter(item => item.stock > 0);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -68,19 +71,23 @@ export function ItemSearchComboBox({ inventory, onItemSelect, value, onChange }:
           <CommandList>
             <CommandEmpty>Barang tidak ditemukan.</CommandEmpty>
             <CommandGroup>
-              {inventory.map((item) => (
+              {availableItems.map((item) => (
                 <CommandItem
                   key={item.id}
                   value={item.name}
                   onSelect={handleSelect}
+                  className="flex justify-between"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value.toLowerCase() === item.name.toLowerCase() ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {item.name}
+                    <div className="flex items-center">
+                        <Check
+                            className={cn(
+                            "mr-2 h-4 w-4",
+                            value.toLowerCase() === item.name.toLowerCase() ? "opacity-100" : "opacity-0"
+                            )}
+                        />
+                        {item.name}
+                    </div>
+                  <span className="text-xs text-muted-foreground">Stok: {item.stock}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -90,3 +97,5 @@ export function ItemSearchComboBox({ inventory, onItemSelect, value, onChange }:
     </Popover>
   )
 }
+
+    

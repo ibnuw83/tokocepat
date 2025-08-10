@@ -49,7 +49,7 @@ export default function InventoryPage() {
     const [itemToDelete, setItemToDelete] = React.useState<InventoryItem | null>(null);
     const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
-    const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
+    const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>([]);
     const [searchTerm, setSearchTerm] = React.useState("");
     const { toast } = useToast();
     const router = useRouter();
@@ -57,14 +57,38 @@ export default function InventoryPage() {
     // This ref will hold the function to update the form field in AddItemDialog
     const setBarcodeInDialogRef = React.useRef<(barcode: string) => void>(() => {});
 
+     const saveInventoryToStorage = React.useCallback((items: InventoryItem[]) => {
+        localStorage.setItem("inventoryItems", JSON.stringify(items));
+        // Dispatch a storage event to notify other tabs/components
+        window.dispatchEvent(new Event('storage'));
+    }, []);
+
+    const loadInventoryFromStorage = React.useCallback(() => {
+        const savedInventory = localStorage.getItem("inventoryItems");
+        if (savedInventory) {
+            setInventoryItems(JSON.parse(savedInventory));
+        } else {
+            // If nothing is in storage, use initial mock data and save it
+            setInventoryItems(initialInventoryItems);
+            saveInventoryToStorage(initialInventoryItems);
+        }
+    }, [saveInventoryToStorage]);
+
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
         if (isLoggedIn !== "true") {
             router.push("/login");
         } else {
             setIsMounted(true);
+            loadInventoryFromStorage();
+
+            // Listen for storage changes from other tabs
+            window.addEventListener('storage', loadInventoryFromStorage);
+            return () => {
+                window.removeEventListener('storage', loadInventoryFromStorage);
+            };
         }
-    }, [router]);
+    }, [router, loadInventoryFromStorage]);
     
     if (!isMounted) {
         return (
@@ -94,15 +118,15 @@ export default function InventoryPage() {
     }
 
     const handleStockAdjustment = (itemId: string, quantity: number, notes: string) => {
-        setInventoryItems(prevItems => {
-            return prevItems.map(item => {
-                if (item.id === itemId) {
-                    const newStock = adjustmentType === 'in' ? item.stock + quantity : item.stock - quantity;
-                    return { ...item, stock: newStock < 0 ? 0 : newStock };
-                }
-                return item;
-            });
+        const updatedItems = inventoryItems.map(item => {
+            if (item.id === itemId) {
+                const newStock = adjustmentType === 'in' ? item.stock + quantity : item.stock - quantity;
+                return { ...item, stock: newStock < 0 ? 0 : newStock };
+            }
+            return item;
         });
+        setInventoryItems(updatedItems);
+        saveInventoryToStorage(updatedItems);
     }
 
     const handleAddNewItem = (values: Omit<InventoryItem, 'id'>) => {
@@ -110,7 +134,9 @@ export default function InventoryPage() {
             id: `ITEM${Date.now()}`,
             ...values
         };
-        setInventoryItems(prev => [...prev, newItem]);
+        const updatedItems = [...inventoryItems, newItem];
+        setInventoryItems(updatedItems);
+        saveInventoryToStorage(updatedItems);
     };
     
     const handleEditItem = (item: InventoryItem) => {
@@ -125,7 +151,9 @@ export default function InventoryPage() {
 
     const handleDeleteItem = () => {
         if (!itemToDelete) return;
-        setInventoryItems(prevItems => prevItems.filter(item => item.id !== itemToDelete.id));
+        const updatedItems = inventoryItems.filter(item => item.id !== itemToDelete.id);
+        setInventoryItems(updatedItems);
+        saveInventoryToStorage(updatedItems);
         toast({
             variant: "destructive",
             title: "Barang Dihapus",
@@ -137,9 +165,9 @@ export default function InventoryPage() {
 
 
     const handleUpdateItem = (updatedItem: InventoryItem) => {
-        setInventoryItems(prevItems => 
-            prevItems.map(item => item.id === updatedItem.id ? updatedItem : item)
-        );
+        const updatedItems = inventoryItems.map(item => item.id === updatedItem.id ? updatedItem : item);
+        setInventoryItems(updatedItems);
+        saveInventoryToStorage(updatedItems);
         setEditingItem(null);
     };
 
@@ -313,3 +341,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    

@@ -26,6 +26,7 @@ import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 
 
 const itemSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, "Nama barang tidak boleh kosong"),
   price: z.coerce.number().min(0, "Harga harus positif"),
   quantity: z.coerce.number().min(1, "Jumlah minimal 1"),
@@ -45,6 +46,7 @@ export default function PosPage() {
   const form = useForm<z.infer<typeof itemSchema>>({
     resolver: zodResolver(itemSchema),
     defaultValues: {
+      id: "",
       name: "",
       price: 0,
       quantity: 1,
@@ -60,9 +62,8 @@ export default function PosPage() {
     }
   }, [router]);
 
-  React.useEffect(() => {
-    if (isMounted) {
-      try {
+  const loadDataFromStorage = React.useCallback(() => {
+     try {
         const storedItems = localStorage.getItem("pos-items");
         if (storedItems) setItems(JSON.parse(storedItems));
         
@@ -70,17 +71,34 @@ export default function PosPage() {
         if (storedDiscount) setDiscount(JSON.parse(storedDiscount));
         
         const storedDiscountType = localStorage.getItem("pos-discount-type");
-        if (storedDiscountType) setDiscountType(JSON.parse(storedDiscountType));
+        if (storedDiscountType) setDiscountType(JSON.parse(storedDiscountType as "percentage" | "fixed"));
         
         const storedInventory = localStorage.getItem("inventoryItems");
-        if (storedInventory) setInventory(JSON.parse(storedInventory));
+        if (storedInventory) {
+          setInventory(JSON.parse(storedInventory));
+        }
 
       } catch (error) {
         console.error("Failed to load data from localStorage", error);
         toast({ variant: "destructive", title: "Gagal Memuat Data", description: "Tidak dapat memuat data dari penyimpanan lokal."});
       }
+  }, [toast]);
+
+  React.useEffect(() => {
+    if (isMounted) {
+     loadDataFromStorage();
+      // Add event listener to sync inventory data across tabs
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "inventoryItems") {
+          loadDataFromStorage();
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
     }
-  }, [isMounted, toast]);
+  }, [isMounted, loadDataFromStorage]);
 
   React.useEffect(() => {
     if (isMounted) localStorage.setItem("pos-items", JSON.stringify(items));
@@ -111,7 +129,37 @@ export default function PosPage() {
   }, [subtotal, discountAmount]);
 
   function handleAddItem(data: z.infer<typeof itemSchema>) {
-    const existingItem = items.find(item => item.name === data.name && item.price === data.price);
+    if (!data.id) {
+        toast({
+            variant: "destructive",
+            title: "Barang Tidak Valid",
+            description: "Silakan pilih barang dari daftar pencarian.",
+        });
+        return;
+    }
+
+    const inventoryItem = inventory.find(i => i.id === data.id);
+    if (!inventoryItem) {
+        toast({
+            variant: "destructive",
+            title: "Barang Tidak Ditemukan",
+            description: "Barang ini tidak ada di inventaris.",
+        });
+        return;
+    }
+    
+    const existingItem = items.find(item => item.id === data.id);
+    const quantityInCart = existingItem ? existingItem.quantity : 0;
+    const requestedQuantity = quantityInCart + data.quantity;
+
+    if (requestedQuantity > inventoryItem.stock) {
+        toast({
+            variant: "destructive",
+            title: "Stok Tidak Cukup",
+            description: `Stok ${inventoryItem.name} hanya tersisa ${inventoryItem.stock}. Anda sudah punya ${quantityInCart} di keranjang.`,
+        });
+        return;
+    }
 
     if (existingItem) {
         // If item exists, just update its quantity
@@ -127,8 +175,10 @@ export default function PosPage() {
     } else {
         // If item does not exist, add as a new item
         const newItem: Item = {
-            id: new Date().toISOString(),
-            ...data,
+            id: data.id,
+            name: data.name,
+            price: data.price,
+            quantity: data.quantity,
         };
         setItems((prev) => [...prev, newItem]);
         toast({
@@ -136,7 +186,7 @@ export default function PosPage() {
             description: `${data.name} telah ditambahkan ke transaksi.`,
         });
     }
-    form.reset({ name: "", price: 0, quantity: 1 });
+    form.reset({ id: "", name: "", price: 0, quantity: 1 });
   }
 
   function handleRemoveItem(id: string) {
@@ -156,6 +206,18 @@ export default function PosPage() {
       handleRemoveItem(id);
       return;
     }
+
+    const inventoryItem = inventory.find(i => i.id === id);
+    if (inventoryItem && quantity > inventoryItem.stock) {
+        toast({
+            variant: "destructive",
+            title: "Stok Tidak Cukup",
+            description: `Stok ${inventoryItem.name} hanya tersisa ${inventoryItem.stock}.`,
+        });
+        setItems(prev => prev.map(item => item.id === id ? { ...item, quantity: inventoryItem.stock } : item));
+        return;
+    }
+
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity } : item))
     );
@@ -165,18 +227,45 @@ export default function PosPage() {
     setItems([]);
     setDiscount(0);
     setDiscountType("fixed");
-    form.reset();
+    form.reset({ id: "", name: "", price: 0, quantity: 1 });
     toast({
       title: "Transaksi Baru",
       description: "Keranjang telah dikosongkan.",
+    });
+  }
+
+  function finalizeTransaction() {
+    // 1. Update stock in inventory
+    const newInventory = [...inventory];
+    let stockUpdated = false;
+    items.forEach(cartItem => {
+        const inventoryIndex = newInventory.findIndex(invItem => invItem.id === cartItem.id);
+        if (inventoryIndex > -1) {
+            newInventory[inventoryIndex].stock -= cartItem.quantity;
+            stockUpdated = true;
+        }
+    });
+
+    if (stockUpdated) {
+        setInventory(newInventory);
+        localStorage.setItem("inventoryItems", JSON.stringify(newInventory));
+         // Dispatch storage event to notify other tabs/components (like inventory page)
+        window.dispatchEvent(new Event('storage'));
+    }
+
+    // 2. Clear current transaction
+    handleNewTransaction();
+    setReceiptOpen(false);
+    toast({
+        title: "Transaksi Selesai",
+        description: "Stok telah diperbarui dan transaksi baru siap dimulai.",
     });
   }
   
   function handleBarcodeScanned(decodedText: string) {
     const foundItem = inventory.find(item => item.barcode === decodedText);
     if (foundItem) {
-        form.setValue("name", foundItem.name);
-        form.setValue("price", foundItem.price);
+        handleItemSelect(foundItem);
         toast({
             title: "Barang Ditemukan",
             description: `${foundItem.name} ditambahkan. Silakan atur jumlah.`,
@@ -192,6 +281,7 @@ export default function PosPage() {
   }
 
   const handleItemSelect = (item: InventoryItem) => {
+    form.setValue("id", item.id);
     form.setValue("name", item.name);
     form.setValue("price", item.price);
   };
@@ -325,7 +415,7 @@ export default function PosPage() {
                           <FormItem>
                             <FormLabel>Harga</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="cth: 18000" {...field} readOnly/>
+                              <Input type="number" placeholder="Otomatis" {...field} readOnly/>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -393,7 +483,7 @@ export default function PosPage() {
                 </CardContent>
                 <CardFooter>
                    <Button size="lg" className="w-full transition-transform active:scale-95" onClick={() => setReceiptOpen(true)} disabled={items.length === 0}>
-                    <Printer className="mr-2 h-5 w-5"/> Buat Struk
+                    <Printer className="mr-2 h-5 w-5"/> Proses & Buat Struk
                    </Button>
                 </CardFooter>
               </Card>
@@ -414,6 +504,7 @@ export default function PosPage() {
         discountAmount={discountAmount}
         total={total}
         formatCurrency={formatCurrency}
+        onConfirm={finalizeTransaction}
       />
       <BarcodeScannerDialog
         isOpen={isScannerOpen}
@@ -423,3 +514,5 @@ export default function PosPage() {
     </>
   );
 }
+
+    
