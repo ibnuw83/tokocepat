@@ -75,6 +75,15 @@ export default function LoginPage() {
     );
 
     if (user) {
+      if (user.status === 'inactive') {
+        toast({
+          variant: "destructive",
+          title: "Login Gagal",
+          description: "Akun Anda tidak aktif. Silakan hubungi administrator.",
+        });
+        return;
+      }
+
       sessionStorage.setItem("isLoggedIn", "true");
       sessionStorage.setItem("username", user.username);
       sessionStorage.setItem("userRole", user.role);

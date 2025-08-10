@@ -36,6 +36,7 @@ export function EditUserDialog({ isOpen, onClose, onSave, user, existingUsers }:
     ),
     password: z.string().min(6, { message: "Password minimal 6 karakter." }).or(z.literal("")).optional(),
     role: z.enum(['Administrator', 'Kasir'], { required_error: "Peran harus dipilih." }),
+    status: z.enum(['active', 'inactive'])
   });
 
 
@@ -45,6 +46,7 @@ export function EditUserDialog({ isOpen, onClose, onSave, user, existingUsers }:
       username: user.username,
       password: "",
       role: user.role,
+      status: user.status,
     },
   });
 
@@ -54,6 +56,7 @@ export function EditUserDialog({ isOpen, onClose, onSave, user, existingUsers }:
         username: user.username,
         password: "",
         role: user.role,
+        status: user.status
       });
     }
   }, [user, isOpen, form]);
@@ -63,6 +66,7 @@ export function EditUserDialog({ isOpen, onClose, onSave, user, existingUsers }:
       ...user,
       username: values.username,
       role: values.role,
+      status: values.status,
       // Only update password if a new one is provided
       password: values.password ? values.password : user.password,
     }
@@ -105,27 +109,50 @@ export function EditUserDialog({ isOpen, onClose, onSave, user, existingUsers }:
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Peran</FormLabel>
-                             <Select onValueChange={field.onChange} value={field.value} disabled={user.username === 'admin'}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih peran pengguna" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="Kasir">Kasir</SelectItem>
-                                    <SelectItem value="Administrator">Administrator</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                 <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Peran</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={user.username === 'admin'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih peran pengguna" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Kasir">Kasir</SelectItem>
+                                        <SelectItem value="Administrator">Administrator</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={user.username === 'admin'}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih status" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="active">Aktif</SelectItem>
+                                        <SelectItem value="inactive">Nonaktif</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                 </div>
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>

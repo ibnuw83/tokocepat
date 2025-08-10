@@ -31,8 +31,8 @@ export default function UsersPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
-    const [isDeleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-    const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
+    const [isToggleStatusDialogOpen, setToggleStatusDialogOpen] = React.useState(false);
+    const [userToToggle, setUserToToggle] = React.useState<User | null>(null);
     const [userToEdit, setUserToEdit] = React.useState<User | null>(null);
     const [users, setUsers] = React.useState<User[]>([]);
     const router = useRouter();
@@ -83,9 +83,10 @@ export default function UsersPage() {
         );
     }
     
-    const handleAddNewUser = (values: Omit<User, 'id'>) => {
+    const handleAddNewUser = (values: Omit<User, 'id' | 'status'>) => {
         const newUser: User = {
             id: `USER${Date.now()}`,
+            status: "active",
             ...values
         };
         const updatedUsers = [...users, newUser];
@@ -113,34 +114,37 @@ export default function UsersPage() {
         setEditDialogOpen(true);
     }
     
-    const handleOpenDeleteDialog = (user: User) => {
+    const handleOpenToggleStatusDialog = (user: User) => {
         if (user.username === 'admin') {
             toast({
                 variant: "destructive",
                 title: "Aksi Ditolak",
-                description: "Pengguna 'admin' tidak dapat dihapus.",
+                description: "Pengguna 'admin' tidak dapat dinonaktifkan.",
             });
             return;
         }
-        setUserToDelete(user);
-        setDeleteDialogOpen(true);
+        setUserToToggle(user);
+        setToggleStatusDialogOpen(true);
     }
 
-    const handleConfirmDelete = () => {
-        if (!userToDelete) return;
+    const handleConfirmToggleStatus = () => {
+        if (!userToToggle) return;
 
-        const updatedUsers = users.filter(u => u.id !== userToDelete.id);
+        const updatedUsers = users.map(u => 
+            u.id === userToToggle.id 
+                ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' }
+                : u
+        );
         setUsers(updatedUsers);
         saveUsersToStorage(updatedUsers);
 
         toast({
-            variant: "destructive",
-            title: "Pengguna Dihapus",
-            description: `Pengguna "${userToDelete.username}" telah berhasil dihapus.`,
+            title: "Status Pengguna Diperbarui",
+            description: `Pengguna "${userToToggle.username}" telah di${userToToggle.status === 'active' ? 'nonaktifkan' : 'aktifkan'}.`,
         });
 
-        setDeleteDialogOpen(false);
-        setUserToDelete(null);
+        setToggleStatusDialogOpen(false);
+        setUserToToggle(null);
     }
     
   return (
@@ -166,6 +170,7 @@ export default function UsersPage() {
                     <TableRow>
                     <TableHead>Username</TableHead>
                     <TableHead>Peran</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -176,6 +181,11 @@ export default function UsersPage() {
                         <TableCell>
                             <Badge variant={user.role === 'Administrator' ? 'default' : 'secondary'}>
                                 {user.role}
+                            </Badge>
+                        </TableCell>
+                         <TableCell>
+                            <Badge variant={user.status === 'active' ? 'outline' : 'destructive'} className={user.status === 'active' ? 'border-green-500 text-green-600' : ''}>
+                                {user.status === 'active' ? 'Aktif' : 'Nonaktif'}
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -192,11 +202,11 @@ export default function UsersPage() {
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
-                                      onClick={() => handleOpenDeleteDialog(user)}
-                                      className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                      onClick={() => handleOpenToggleStatusDialog(user)}
+                                      className={user.status === 'active' ? "text-destructive focus:bg-destructive/10 focus:text-destructive" : "text-green-600 focus:bg-green-100 focus:text-green-700"}
                                       disabled={user.username === 'admin'}
                                     >
-                                      Hapus
+                                      {user.status === 'active' ? 'Nonaktifkan' : 'Aktifkan'}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -227,19 +237,19 @@ export default function UsersPage() {
           existingUsers={users}
       />
     )}
-    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+    <AlertDialog open={isToggleStatusDialogOpen} onOpenChange={setToggleStatusDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Tindakan ini tidak dapat dibatalkan. Ini akan menghapus pengguna
-                    <span className="font-bold"> "{userToDelete?.username}" </span>
-                    secara permanen.
+                    Anda akan mengubah status pengguna 
+                    <span className="font-bold"> "{userToToggle?.username}" </span>
+                    menjadi <span className="font-bold">{userToToggle?.status === 'active' ? 'Nonaktif' : 'Aktif'}</span>.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setUserToDelete(null)}>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmDelete}>Ya, Hapus</AlertDialogAction>
+                <AlertDialogCancel onClick={() => setUserToToggle(null)}>Batal</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmToggleStatus}>Ya, Lanjutkan</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>

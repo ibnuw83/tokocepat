@@ -24,7 +24,7 @@ import type { User } from '@/lib/types';
 export function AddUserDialog({ isOpen, onClose, onSave, existingUsers }: {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (values: Omit<User, 'id'>) => void;
+  onSave: (values: Omit<User, 'id' | 'status'>) => void;
   existingUsers: User[];
 }) {
   

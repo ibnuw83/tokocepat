@@ -24,4 +24,5 @@ export interface User {
   username: string;
   password: string;
   role: 'Administrator' | 'Kasir';
+  status: 'active' | 'inactive';
 }
