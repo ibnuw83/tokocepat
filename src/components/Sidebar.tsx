@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings } from "lucide-react";
 import Image from "next/image";
 
-const menuItems = [
+const allMenuItems = [
   { href: "/transactions", icon: CreditCard, label: "Kasir" },
   { href: "/admin/inventory", icon: Package, label: "Manajemen Stok" },
   { href: "/admin/financials", icon: BookCopy, label: "Laporan Keuangan" },
@@ -18,11 +18,17 @@ const menuItems = [
   { href: "/admin/settings", icon: Settings, label: "Pengaturan Toko" },
 ];
 
+const cashierMenuItems = [
+    { href: "/transactions", icon: CreditCard, label: "Kasir" },
+    { href: "/admin/reports", icon: FileText, label: "Laporan Transaksi" },
+]
+
 
 export function Sidebar() {
   const pathname = usePathname();
   const [storeName, setStoreName] = React.useState("Toko Cepat");
   const [logo, setLogo] = React.useState<string | null>(null);
+  const [menuItems, setMenuItems] = React.useState(allMenuItems);
 
   React.useEffect(() => {
      // This function will be called whenever the storage changes in another tab
@@ -32,6 +38,14 @@ export function Sidebar() {
       if (savedName) setStoreName(savedName);
       if (savedLogo) setLogo(savedLogo);
     };
+    
+    // Determine user role and set menu items
+    const userRole = sessionStorage.getItem("userRole");
+    if (userRole === 'Kasir') {
+        setMenuItems(cashierMenuItems);
+    } else {
+        setMenuItems(allMenuItems);
+    }
 
     // Initial load
     handleStorageChange();

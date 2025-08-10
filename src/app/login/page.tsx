@@ -72,6 +72,7 @@ export default function LoginPage() {
     if (user) {
       sessionStorage.setItem("isLoggedIn", "true");
       sessionStorage.setItem("username", user.username);
+      sessionStorage.setItem("userRole", user.role);
       toast({
         title: "Login Berhasil",
         description: `Selamat datang, ${user.username}!`,
