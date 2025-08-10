@@ -9,17 +9,48 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AddCustomerDialog } from "@/components/AddCustomerDialog";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock data for customers
-const customers = [
-  { id: "CUS001", name: "Budi Santoso", phone: "081234567890", totalTransactions: 5 },
-  { id: "CUS002", name: "Citra Lestari", phone: "085678901234", totalTransactions: 12 },
-  { id: "CUS003", name: "Agus Wijaya", phone: "087890123456", totalTransactions: 2 },
+// Mock data for initial customers, will be replaced by localStorage
+const initialCustomers = [
+  { id: "CUS001", name: "Budi Santoso", phone: "081234567890" },
+  { id: "CUS002", name: "Citra Lestari", phone: "085678901234" },
+  { id: "CUS003", name: "Agus Wijaya", phone: "087890123456" },
 ];
+
+export type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+};
 
 export default function CustomersPage() {
     const [isMounted, setIsMounted] = React.useState(false);
+    const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
+    const [customers, setCustomers] = React.useState<Customer[]>([]);
+    const [transactions, setTransactions] = React.useState<any[]>([]);
     const router = useRouter();
+    const { toast } = useToast();
+
+    const saveCustomersToStorage = React.useCallback((items: Customer[]) => {
+        localStorage.setItem("customers", JSON.stringify(items));
+        window.dispatchEvent(new Event('storage'));
+    }, []);
+
+    const loadDataFromStorage = React.useCallback(() => {
+        const savedCustomers = localStorage.getItem("customers");
+        if (savedCustomers) {
+            setCustomers(JSON.parse(savedCustomers));
+        } else {
+            setCustomers(initialCustomers);
+            saveCustomersToStorage(initialCustomers);
+        }
+        const savedTransactions = localStorage.getItem("transactions");
+        if(savedTransactions) {
+            setTransactions(JSON.parse(savedTransactions));
+        }
+    }, [saveCustomersToStorage]);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -27,8 +58,13 @@ export default function CustomersPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
+            loadDataFromStorage();
+            window.addEventListener('storage', loadDataFromStorage);
+            return () => {
+                window.removeEventListener('storage', loadDataFromStorage);
+            };
         }
-    }, [router]);
+    }, [router, loadDataFromStorage]);
     
     if (!isMounted) {
         return (
@@ -43,12 +79,27 @@ export default function CustomersPage() {
             </div>
         );
     }
+    
+    const handleAddNewCustomer = (values: Omit<Customer, 'id'>) => {
+        const newCustomer: Customer = {
+            id: `CUS${Date.now()}`,
+            ...values
+        };
+        const updatedCustomers = [...customers, newCustomer];
+        setCustomers(updatedCustomers);
+        saveCustomersToStorage(updatedCustomers);
+        toast({
+            title: "Pelanggan Ditambahkan",
+            description: `${values.name} telah ditambahkan ke daftar pelanggan.`
+        })
+    };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    const getCustomerTransactionCount = (customerId: string) => {
+        return transactions.filter(t => t.customerId === customerId).length;
     }
     
   return (
+    <>
     <AdminLayout>
       <div className="p-4 md:p-8">
         <Card>
@@ -58,7 +109,7 @@ export default function CustomersPage() {
                     <CardTitle>Data Konsumen</CardTitle>
                     <CardDescription>Lihat dan kelola data pelanggan setia toko Anda.</CardDescription>
                 </div>
-                <Button>
+                <Button onClick={() => setAddDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Tambah Konsumen
                 </Button>
@@ -79,7 +130,7 @@ export default function CustomersPage() {
                     <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.name}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
-                        <TableCell>{customer.totalTransactions} kali</TableCell>
+                        <TableCell>{getCustomerTransactionCount(customer.id)} kali</TableCell>
                         <TableCell className="text-right">
                            <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -102,5 +153,11 @@ export default function CustomersPage() {
         </Card>
       </div>
     </AdminLayout>
+    <AddCustomerDialog
+        isOpen={isAddDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        onSave={handleAddNewCustomer}
+    />
+    </>
   );
 }

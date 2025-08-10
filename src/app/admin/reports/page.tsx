@@ -182,6 +182,7 @@ export default function ReportsPage() {
                     <TableRow>
                     <TableHead>ID Transaksi</TableHead>
                     <TableHead>Tanggal</TableHead>
+                    <TableHead>Pelanggan</TableHead>
                     <TableHead>Jumlah Item</TableHead>
                     <TableHead>Operator</TableHead>
                     <TableHead className="text-right">Total</TableHead>
@@ -192,13 +193,14 @@ export default function ReportsPage() {
                     <TableRow key={trx.id}>
                         <TableCell className="font-medium">{trx.id}</TableCell>
                         <TableCell>{new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</TableCell>
+                        <TableCell>{trx.customerName || 'Pelanggan Umum'}</TableCell>
                         <TableCell>{trx.items}</TableCell>
                         <TableCell>{trx.operator}</TableCell>
                         <TableCell className="text-right">{formatCurrency(trx.total)}</TableCell>
                     </TableRow>
                     )) : (
                     <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                              {transactions.length === 0 ? "Belum ada riwayat transaksi." : "Tidak ada transaksi yang cocok dengan filter."}
                         </TableCell>
                     </TableRow>

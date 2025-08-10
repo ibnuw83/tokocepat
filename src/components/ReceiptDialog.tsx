@@ -23,9 +23,10 @@ interface ReceiptDialogProps {
   total: number;
   formatCurrency: (amount: number) => string;
   onConfirm: () => void;
+  customerName: string;
 }
 
-export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount, total, formatCurrency, onConfirm }: ReceiptDialogProps) {
+export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount, total, formatCurrency, onConfirm, customerName }: ReceiptDialogProps) {
   const handlePrint = () => {
     // This part is for printing visuals. The actual stock update happens onConfirm.
     const printContent = document.getElementById('receipt-content');
@@ -51,6 +52,10 @@ export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount
                 {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
             </p>
             </DialogHeader>
+            <Separator className="my-4" />
+            <div className="text-sm print:text-black">
+                Pelanggan: <span className="font-semibold">{customerName}</span>
+            </div>
             <Separator className="my-4" />
             <div className="my-4 space-y-2 print:text-black">
             {items.map(item => (
@@ -102,5 +107,3 @@ export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount
     </Dialog>
   );
 }
-
-    

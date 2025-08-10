@@ -5,7 +5,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut, ScanBarcode } from "lucide-react";
+import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut, ScanBarcode, UserSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { Item, Transaction } from "@/lib/types";
@@ -22,7 +22,9 @@ import { ReceiptDialog } from "@/components/ReceiptDialog";
 import { AdminLayout } from "@/components/AdminLayout";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import type { InventoryItem } from "@/app/admin/inventory/page";
+import type { Customer } from "@/app/admin/customers/page";
 import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
+import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
 
 
 const itemSchema = z.object({
@@ -40,6 +42,8 @@ export default function PosPage() {
   const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const [inventory, setInventory] = React.useState<InventoryItem[]>([]);
+  const [customers, setCustomers] = React.useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -74,9 +78,10 @@ export default function PosPage() {
         if (storedDiscountType) setDiscountType(JSON.parse(storedDiscountType as "percentage" | "fixed"));
         
         const storedInventory = localStorage.getItem("inventoryItems");
-        if (storedInventory) {
-          setInventory(JSON.parse(storedInventory));
-        }
+        if (storedInventory) setInventory(JSON.parse(storedInventory));
+        
+        const storedCustomers = localStorage.getItem("customers");
+        if (storedCustomers) setCustomers(JSON.parse(storedCustomers));
 
       } catch (error) {
         console.error("Failed to load data from localStorage", error);
@@ -87,9 +92,9 @@ export default function PosPage() {
   React.useEffect(() => {
     if (isMounted) {
      loadDataFromStorage();
-      // Add event listener to sync inventory data across tabs
+      // Add event listener to sync data across tabs
       const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === "inventoryItems" || e.key === "transactions") {
+        if (e.key === "inventoryItems" || e.key === "transactions" || e.key === "customers") {
           loadDataFromStorage();
         }
       };
@@ -227,10 +232,11 @@ export default function PosPage() {
     setItems([]);
     setDiscount(0);
     setDiscountType("fixed");
+    setSelectedCustomer(null);
     form.reset({ id: "", name: "", price: 0, quantity: 1 });
     toast({
       title: "Transaksi Baru",
-      description: "Keranjang telah dikosongkan.",
+      description: "Keranjang dan pelanggan telah dikosongkan.",
     });
   }
 
@@ -244,6 +250,8 @@ export default function PosPage() {
       items: items.reduce((sum, item) => sum + item.quantity, 0),
       total: total,
       operator: sessionStorage.getItem("username") || "Unknown",
+      customerId: selectedCustomer?.id,
+      customerName: selectedCustomer?.name || "Pelanggan Umum",
       details: items,
     };
     transactions.unshift(newTransaction); // Add to the beginning of the array
@@ -334,11 +342,21 @@ export default function PosPage() {
                       <ShoppingCart className="h-6 w-6 text-primary" />
                       <CardTitle className="font-headline">Transaksi Saat Ini</CardTitle>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleNewTransaction} className="transition-transform active:scale-95">
+                     <Button variant="outline" size="sm" onClick={handleNewTransaction} className="transition-transform active:scale-95">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Transaksi Baru
                     </Button>
                   </div>
+                   <CardDescription className="pt-4">
+                      <div className="flex items-center gap-3">
+                        <UserSearch className="h-5 w-5 text-muted-foreground"/>
+                        <CustomerSearchComboBox
+                            customers={customers}
+                            selectedCustomer={selectedCustomer}
+                            onCustomerSelect={setSelectedCustomer}
+                        />
+                      </div>
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -515,6 +533,7 @@ export default function PosPage() {
       <ReceiptDialog
         isOpen={isReceiptOpen}
         onClose={() => setReceiptOpen(false)}
+        customerName={selectedCustomer?.name || "Pelanggan Umum"}
         items={items}
         subtotal={subtotal}
         discountAmount={discountAmount}
@@ -530,5 +549,3 @@ export default function PosPage() {
     </>
   );
 }
-
-    

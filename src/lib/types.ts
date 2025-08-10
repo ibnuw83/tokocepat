@@ -12,7 +12,7 @@ export interface Transaction {
   total: number;
   items: number; // Total quantity of items
   operator: string;
+  customerId?: string;
+  customerName?: string;
   details: Item[];
 }
-
-    
