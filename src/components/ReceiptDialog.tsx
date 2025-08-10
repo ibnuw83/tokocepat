@@ -71,16 +71,16 @@ export function ReceiptDialog({
     @media print {
       @page {
         margin: 0;
-        size: 58mm auto;
+        size: 80mm auto;
       }
       body {
         margin: 0;
         background: #fff;
       }
       .print-container {
-        padding: 5px;
+        padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 9pt;
+        font-size: 10pt;
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -93,11 +93,11 @@ export function ReceiptDialog({
         margin: 0 auto 5px;
       }
       .print-header h1 {
-        font-size: 11pt;
+        font-size: 12pt;
         margin: 0;
       }
        .print-header p {
-        font-size: 8pt;
+        font-size: 9pt;
         margin: 0;
       }
       .print-item-list, .print-summary {
@@ -116,7 +116,7 @@ export function ReceiptDialog({
          text-align: right;
       }
       .print-item .item-qty-price {
-        font-size: 8pt;
+        font-size: 9pt;
         grid-column: 1 / -1;
       }
       .print-summary-line {
@@ -133,11 +133,11 @@ export function ReceiptDialog({
       }
       .print-total {
         font-weight: bold;
-        font-size: 10pt;
+        font-size: 11pt;
       }
       .print-footer {
           white-space: pre-wrap;
-          font-size: 8pt;
+          font-size: 9pt;
       }
     }
   `;
@@ -147,7 +147,7 @@ export function ReceiptDialog({
     if (printContent) {
       const receiptHtml = printContent.querySelector('#receipt-visual')?.innerHTML;
       if (receiptHtml) {
-        const printWindow = window.open('', '_blank', 'width=300,height=500');
+        const printWindow = window.open('', '_blank', 'width=302,height=500'); // Corresponds to ~80mm
         printWindow?.document.write(`
           <html>
             <head>
