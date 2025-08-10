@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Download, CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Transaction } from "@/lib/types";
+import type { Transaction, PaymentMethod } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,6 +28,7 @@ declare module 'jspdf' {
 }
 
 const ALL_CASHIERS_VALUE = "ALL_CASHIERS";
+const ALL_PAYMENT_METHODS = "ALL_PAYMENT_METHODS";
 
 export default function ReportsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
@@ -38,6 +39,7 @@ export default function ReportsPage() {
     // Filter states
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
     const [selectedOperator, setSelectedOperator] = React.useState<string>("");
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<string>("");
 
     const router = useRouter();
     const { toast } = useToast();
@@ -92,8 +94,12 @@ export default function ReportsPage() {
             items = items.filter(t => t.operator === selectedOperator);
         }
 
-        setFilteredTransactions(items);
-    }, [dateRange, selectedOperator, transactions]);
+        if (selectedPaymentMethod) {
+            items = items.filter(t => t.paymentMethod === selectedPaymentMethod);
+        }
+
+        setFilteredTransactions(items.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    }, [dateRange, selectedOperator, selectedPaymentMethod, transactions]);
 
 
     if (!isMounted) {
@@ -117,6 +123,7 @@ export default function ReportsPage() {
     const resetFilters = () => {
         setDateRange(undefined);
         setSelectedOperator("");
+        setSelectedPaymentMethod("");
     }
     
     const handleDownload = () => {
@@ -132,19 +139,20 @@ export default function ReportsPage() {
             // Add table
             doc.autoTable({
                 startY: 30,
-                head: [['ID Transaksi', 'Tanggal', 'Pelanggan', 'Jumlah Item', 'Operator', 'Total']],
+                head: [['ID', 'Tanggal', 'Pelanggan', 'Kasir', 'Pembayaran', 'Total']],
                 body: dataToDownload.map(trx => [
                     trx.id,
-                    new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
                     trx.customerName || 'Umum',
-                    trx.items,
                     trx.operator,
+                    trx.paymentMethod || 'Tunai',
                     formatCurrency(trx.total),
                 ]),
                 headStyles: { fillColor: [56, 30, 114] }, // Primary color
                 styles: { halign: 'center' },
                 columnStyles: {
                     0: { halign: 'left' },
+                    1: { halign: 'left' },
                     2: { halign: 'left' },
                     5: { halign: 'right' },
                 }
@@ -174,6 +182,14 @@ export default function ReportsPage() {
         }
     }
 
+    const handlePaymentMethodChange = (value: string) => {
+        if (value === ALL_PAYMENT_METHODS) {
+            setSelectedPaymentMethod("");
+        } else {
+            setSelectedPaymentMethod(value);
+        }
+    }
+
 
   return (
     <AdminLayout>
@@ -192,7 +208,7 @@ export default function ReportsPage() {
             </div>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col sm:flex-row items-center gap-2 pb-6">
+             <div className="flex flex-wrap items-center gap-2 pb-6">
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -228,7 +244,7 @@ export default function ReportsPage() {
                     </PopoverContent>
                 </Popover>
                 <Select value={selectedOperator || ALL_CASHIERS_VALUE} onValueChange={handleOperatorChange}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[160px]">
                         <SelectValue placeholder="Semua Kasir" />
                     </SelectTrigger>
                     <SelectContent>
@@ -236,7 +252,18 @@ export default function ReportsPage() {
                         {uniqueOperators.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
                     </SelectContent>
                 </Select>
-                {(dateRange || selectedOperator) && (
+                 <Select value={selectedPaymentMethod || ALL_PAYMENT_METHODS} onValueChange={handlePaymentMethodChange}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Semua Pembayaran" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={ALL_PAYMENT_METHODS}>Semua Pembayaran</SelectItem>
+                        <SelectItem value="Tunai">Tunai</SelectItem>
+                        <SelectItem value="Kartu Debit/Kredit">Kartu Debit/Kredit</SelectItem>
+                        <SelectItem value="QRIS/E-Wallet">QRIS/E-Wallet</SelectItem>
+                    </SelectContent>
+                </Select>
+                {(dateRange || selectedOperator || selectedPaymentMethod) && (
                         <Button variant="ghost" onClick={resetFilters} size="icon">
                         <X className="h-4 w-4" />
                         <span className="sr-only">Reset Filter</span>
@@ -249,7 +276,7 @@ export default function ReportsPage() {
                     <TableHead>ID Transaksi</TableHead>
                     <TableHead>Tanggal</TableHead>
                     <TableHead>Pelanggan</TableHead>
-                    <TableHead>Jumlah Item</TableHead>
+                    <TableHead>Metode Pembayaran</TableHead>
                     <TableHead>Operator</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     </TableRow>
@@ -258,9 +285,9 @@ export default function ReportsPage() {
                     {filteredTransactions.length > 0 ? filteredTransactions.map((trx) => (
                     <TableRow key={trx.id}>
                         <TableCell className="font-medium">{trx.id}</TableCell>
-                        <TableCell>{new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}</TableCell>
+                        <TableCell>{new Date(trx.date).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</TableCell>
                         <TableCell>{trx.customerName || 'Pelanggan Umum'}</TableCell>
-                        <TableCell>{trx.items}</TableCell>
+                        <TableCell>{trx.paymentMethod || 'Tunai'}</TableCell>
                         <TableCell>{trx.operator}</TableCell>
                         <TableCell className="text-right">{formatCurrency(trx.total)}</TableCell>
                     </TableRow>

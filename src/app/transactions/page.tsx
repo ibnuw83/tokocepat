@@ -8,7 +8,7 @@ import { z } from "zod";
 import { PlusCircle, Trash2, Printer, X, FileText, ShoppingCart, LogOut, ScanBarcode, UserSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import type { Item, Transaction } from "@/lib/types";
+import type { Item, Transaction, PaymentMethod } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import type { Customer } from "@/app/admin/customers/page";
 import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 
 const itemSchema = z.object({
@@ -40,6 +41,7 @@ export default function PosPage() {
   const [discount, setDiscount] = React.useState(0);
   const [discountType, setDiscountType] = React.useState<"percentage" | "fixed">("fixed");
   const [paymentAmount, setPaymentAmount] = React.useState(0);
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('Tunai');
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
   const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -131,6 +133,11 @@ export default function PosPage() {
     return paymentAmount - total;
   }, [paymentAmount, total]);
 
+  React.useEffect(() => {
+    if (paymentMethod !== 'Tunai') {
+        setPaymentAmount(total);
+    }
+  }, [paymentMethod, total]);
 
   function handleAddItem(data: z.infer<typeof itemSchema>) {
     if (!data.id) {
@@ -231,6 +238,7 @@ export default function PosPage() {
     setDiscount(0);
     setDiscountType("fixed");
     setPaymentAmount(0);
+    setPaymentMethod('Tunai');
     setSelectedCustomer(null);
     form.reset({ id: "", name: "", price: 0, quantity: 1 });
     localStorage.removeItem("pos-items");
@@ -256,6 +264,7 @@ export default function PosPage() {
       customerId: selectedCustomer?.id,
       customerName: selectedCustomer?.name || "Pelanggan Umum",
       details: items,
+      paymentMethod: paymentMethod,
     };
     
     transactions.push(newTransaction);
@@ -352,6 +361,8 @@ export default function PosPage() {
     return Array.from(options).sort((a,b) => a - b).slice(0, 4);
   }
 
+  const isPaymentDisabled = items.length === 0;
+  const canProcess = !isPaymentDisabled && (paymentMethod === 'Tunai' ? paymentAmount >= total : true);
 
   return (
     <>
@@ -518,9 +529,9 @@ export default function PosPage() {
                         value={discount}
                         onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
                         className="flex-grow"
-                        disabled={items.length === 0}
+                        disabled={isPaymentDisabled}
                       />
-                      <Select value={discountType} onValueChange={(value: "percentage" | "fixed") => setDiscountType(value)} disabled={items.length === 0}>
+                      <Select value={discountType} onValueChange={(value: "percentage" | "fixed") => setDiscountType(value)} disabled={isPaymentDisabled}>
                         <SelectTrigger className="w-[100px]">
                           <SelectValue />
                         </SelectTrigger>
@@ -542,30 +553,56 @@ export default function PosPage() {
                   </div>
                   <Separator/>
                     <div className="space-y-2">
-                      <Label htmlFor="payment-amount">Jumlah Bayar</Label>
-                       <Input
-                        id="payment-amount"
-                        type="number"
-                        placeholder="Masukkan nominal pembayaran"
-                        value={paymentAmount || ""}
-                        onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                        disabled={items.length === 0}
-                      />
-                      <div className="flex gap-2 pt-1">
-                          {getQuickPaymentOptions(total).map(opt => (
-                            <Button key={opt} variant="outline" size="sm" onClick={() => setPaymentAmount(opt)} disabled={items.length === 0}>
-                              {formatCurrency(opt)}
-                            </Button>
-                          ))}
-                      </div>
+                      <Label>Metode Pembayaran</Label>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}
+                        className="flex gap-4 pt-1"
+                        disabled={isPaymentDisabled}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="Tunai" id="r1" />
+                          <Label htmlFor="r1">Tunai</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="Kartu Debit/Kredit" id="r2" />
+                          <Label htmlFor="r2">Kartu</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="QRIS/E-Wallet" id="r3" />
+                          <Label htmlFor="r3">QRIS</Label>
+                        </div>
+                      </RadioGroup>
                     </div>
+
+                    {paymentMethod === 'Tunai' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="payment-amount">Jumlah Bayar</Label>
+                          <Input
+                            id="payment-amount"
+                            type="number"
+                            placeholder="Masukkan nominal pembayaran"
+                            value={paymentAmount || ""}
+                            onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                            disabled={isPaymentDisabled}
+                          />
+                          <div className="flex gap-2 pt-1 flex-wrap">
+                              {getQuickPaymentOptions(total).map(opt => (
+                                <Button key={opt} variant="outline" size="sm" onClick={() => setPaymentAmount(opt)} disabled={isPaymentDisabled}>
+                                  {formatCurrency(opt)}
+                                </Button>
+                              ))}
+                          </div>
+                        </div>
+                    )}
+                    
                     <div className="flex justify-between font-semibold text-base">
                       <span>Kembalian</span>
-                       <span className={changeAmount > 0 ? "text-green-500" : ""}>{formatCurrency(changeAmount)}</span>
+                       <span className={changeAmount > 0 && paymentMethod === 'Tunai' ? "text-green-500" : ""}>{formatCurrency(changeAmount)}</span>
                     </div>
                 </CardContent>
                 <CardFooter>
-                   <Button size="lg" className="w-full transition-transform active:scale-95" onClick={() => setReceiptOpen(true)} disabled={items.length === 0 || paymentAmount < total}>
+                   <Button size="lg" className="w-full transition-transform active:scale-95" onClick={() => setReceiptOpen(true)} disabled={!canProcess}>
                     <Printer className="mr-2 h-5 w-5"/> Proses & Buat Struk
                    </Button>
                 </CardFooter>
@@ -587,6 +624,7 @@ export default function PosPage() {
         changeAmount={changeAmount}
         formatCurrency={formatCurrency}
         onConfirm={finalizeTransaction}
+        paymentMethod={paymentMethod}
       />
       <BarcodeScannerDialog
         isOpen={isScannerOpen}

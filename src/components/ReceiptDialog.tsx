@@ -10,7 +10,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { Item } from "@/lib/types";
+import type { Item, PaymentMethod } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
 import { Printer, X, CheckCircle } from "lucide-react";
 
@@ -26,6 +26,7 @@ interface ReceiptDialogProps {
   formatCurrency: (amount: number) => string;
   onConfirm: () => void;
   customerName: string;
+  paymentMethod: PaymentMethod;
 }
 
 export function ReceiptDialog({ 
@@ -39,7 +40,8 @@ export function ReceiptDialog({
   changeAmount, 
   formatCurrency, 
   onConfirm, 
-  customerName 
+  customerName,
+  paymentMethod
 }: ReceiptDialogProps) {
   
   // CSS for thermal printer styling
@@ -155,12 +157,12 @@ export function ReceiptDialog({
             </div>
              <Separator className="my-2 print-separator"/>
              <div className="flex justify-between text-sm">
-                <p>Jumlah Bayar</p>
-                <p>{formatCurrency(paymentAmount)}</p>
+                <p>Pembayaran ({paymentMethod})</p>
+                <p>{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
             </div>
              <div className="flex justify-between text-sm">
                 <p>Kembalian</p>
-                <p>{formatCurrency(changeAmount)}</p>
+                <p>{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
             </div>
             </div>
             <Separator className="my-4 print-separator"/>

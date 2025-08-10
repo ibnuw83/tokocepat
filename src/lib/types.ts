@@ -1,5 +1,7 @@
 
 
+export type PaymentMethod = 'Tunai' | 'Kartu Debit/Kredit' | 'QRIS/E-Wallet';
+
 export interface Item {
   id: string;
   name: string;
@@ -17,6 +19,7 @@ export interface Transaction {
   customerId?: string;
   customerName?: string;
   details: Item[];
+  paymentMethod: PaymentMethod;
 }
 
 export interface User {
