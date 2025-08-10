@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -47,11 +48,13 @@ export default function LoginPage() {
   });
 
   function onSubmit(data: z.infer<typeof loginSchema>) {
+    // For now, we only accept admin/admin
     if (data.username === "admin" && data.password === "admin") {
       sessionStorage.setItem("isLoggedIn", "true");
+      sessionStorage.setItem("username", data.username);
       toast({
         title: "Login Berhasil",
-        description: "Selamat datang, Admin!",
+        description: `Selamat datang, ${data.username}!`,
       });
       router.push("/");
     } else {
