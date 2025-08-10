@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -18,7 +17,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ReceiptDialog } from "@/components/ReceiptDialog";
-import { AdminLayout } from "@/components/AdminLayout";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import type { InventoryItem } from "@/app/admin/inventory/page";
 import type { Customer } from "@/app/admin/customers/page";
@@ -26,6 +24,7 @@ import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PosLayout } from "@/components/PosLayout";
 
 
 const itemSchema = z.object({
@@ -370,7 +369,7 @@ export default function PosPage() {
 
   return (
     <>
-      <AdminLayout>
+      <PosLayout>
         <main className="flex-grow container mx-auto p-4 md:p-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
@@ -515,7 +514,7 @@ export default function PosPage() {
               </Card>
             </div>
 
-            <div className="space-y-6 lg:sticky lg:top-8">
+            <div className="space-y-6 lg:sticky lg:top-24">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline flex items-center gap-3"><FileText className="text-primary"/>Ringkasan Pesanan</CardTitle>
@@ -626,7 +625,7 @@ export default function PosPage() {
             </div>
           </div>
         </main>
-      </AdminLayout>
+      </PosLayout>
 
       <ReceiptDialog
         isOpen={isReceiptOpen}

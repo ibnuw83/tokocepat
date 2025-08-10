@@ -29,6 +29,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   function handleLogout() {
     sessionStorage.removeItem("isLoggedIn");
     sessionStorage.removeItem("username");
+    sessionStorage.removeItem("userRole");
     router.push("/login");
     toast({
       title: "Logout Berhasil",
