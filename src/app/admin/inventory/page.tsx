@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowUp, ArrowDown } from "lucide-react";
 import { StockAdjustmentDialog } from "@/components/StockAdjustmentDialog";
+import { AddItemDialog } from "@/components/AddItemDialog";
 
 // Mock data for inventory
 const initialInventoryItems = [
@@ -18,11 +19,12 @@ const initialInventoryItems = [
   { id: "ITEM004", name: "Donat Gula", stock: 42, price: 7000 },
 ];
 
-type InventoryItem = typeof initialInventoryItems[0];
+export type InventoryItem = typeof initialInventoryItems[0];
 
 export default function InventoryPage() {
     const [isMounted, setIsMounted] = React.useState(false);
-    const [isDialogOpen, setDialogOpen] = React.useState(false);
+    const [isAdjustmentDialogOpen, setAdjustmentDialogOpen] = React.useState(false);
+    const [isAddItemDialogOpen, setAddItemDialogOpen] = React.useState(false);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
     const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
     const router = useRouter();
@@ -54,9 +56,9 @@ export default function InventoryPage() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     }
 
-    const handleOpenDialog = (type: "in" | "out") => {
+    const handleOpenAdjustmentDialog = (type: "in" | "out") => {
         setAdjustmentType(type);
-        setDialogOpen(true);
+        setAdjustmentDialogOpen(true);
     }
 
     const handleStockAdjustment = (itemId: string, quantity: number, notes: string) => {
@@ -69,18 +71,18 @@ export default function InventoryPage() {
                 return item;
             });
         });
-
-        // In a real app, you would also save the transaction log here.
-        // For example:
-        // const transaction = { 
-        //     itemId, 
-        //     quantity, 
-        //     notes, 
-        //     type: adjustmentType, 
-        //     date: new Date().toISOString() 
-        // };
-        // saveStockTransaction(transaction);
     }
+
+    const handleAddNewItem = (name: string, price: number, stock: number) => {
+        const newItem: InventoryItem = {
+            id: `ITEM${Date.now()}`,
+            name,
+            price,
+            stock
+        };
+        setInventoryItems(prev => [...prev, newItem]);
+    };
+
 
   return (
     <>
@@ -94,15 +96,15 @@ export default function InventoryPage() {
                         <CardDescription>Lihat dan kelola stok barang di toko Anda.</CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => handleOpenDialog('in')}>
+                        <Button variant="outline" onClick={() => handleOpenAdjustmentDialog('in')}>
                             <ArrowUp className="mr-2 h-4 w-4" />
                             Barang Masuk
                         </Button>
-                        <Button variant="outline" onClick={() => handleOpenDialog('out')}>
+                        <Button variant="outline" onClick={() => handleOpenAdjustmentDialog('out')}>
                             <ArrowDown className="mr-2 h-4 w-4" />
                             Barang Keluar
                         </Button>
-                        <Button>
+                        <Button onClick={() => setAddItemDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Tambah Barang Baru
                         </Button>
@@ -136,11 +138,16 @@ export default function InventoryPage() {
         </div>
         </AdminLayout>
         <StockAdjustmentDialog
-            isOpen={isDialogOpen}
-            onClose={() => setDialogOpen(false)}
+            isOpen={isAdjustmentDialogOpen}
+            onClose={() => setAdjustmentDialogOpen(false)}
             type={adjustmentType}
             items={inventoryItems}
             onSave={handleStockAdjustment}
+        />
+        <AddItemDialog
+            isOpen={isAddItemDialogOpen}
+            onClose={() => setAddItemDialogOpen(false)}
+            onSave={handleAddNewItem}
         />
     </>
   );

@@ -5,29 +5,37 @@ import * as React from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DollarSign, TrendingUp, TrendingDown, PlusCircle } from "lucide-react";
+import { FinancialsEntryDialog } from "@/components/FinancialsEntryDialog";
 
-// Mock data for financials
-const expenses = [
+// Mock data
+const initialExpenses = [
   { id: "EXP001", date: "2024-05-20", description: "Beli bahan baku kopi", amount: 500000 },
   { id: "EXP002", date: "2024-05-21", description: "Bayar listrik", amount: 300000 },
 ];
-const capital = [
+
+const initialCapital = [
   { id: "CAP001", date: "2024-05-01", description: "Modal awal bulan", amount: 5000000 },
 ];
 
+type FinancialEntry = { id: string; date: string; description: string; amount: number };
+
 export default function FinancialsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
+    const [isDialogOpen, setDialogOpen] = React.useState(false);
+    const [dialogType, setDialogType] = React.useState<'capital' | 'expense'>('capital');
+    const [expenses, setExpenses] = React.useState<FinancialEntry[]>(initialExpenses);
+    const [capital, setCapital] = React.useState<FinancialEntry[]>(initialCapital);
     const router = useRouter();
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
         if (isLoggedIn !== "true") {
-        router.push("/login");
+            router.push("/login");
         } else {
-        setIsMounted(true);
+            setIsMounted(true);
         }
     }, [router]);
     
@@ -49,7 +57,31 @@ export default function FinancialsPage() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     }
 
+    const handleOpenDialog = (type: 'capital' | 'expense') => {
+        setDialogType(type);
+        setDialogOpen(true);
+    };
+
+    const handleSaveEntry = (description: string, amount: number) => {
+        const newEntry = {
+            id: `${dialogType.toUpperCase()}${Date.now()}`,
+            date: new Date().toISOString().split('T')[0],
+            description,
+            amount,
+        };
+        if (dialogType === 'capital') {
+            setCapital(prev => [...prev, newEntry]);
+        } else {
+            setExpenses(prev => [...prev, newEntry]);
+        }
+    };
+
+    const totalRevenue = 7350000; // Mock data
+    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const netProfit = totalRevenue - totalExpenses;
+
   return (
+    <>
     <AdminLayout>
       <div className="p-4 md:p-8 grid gap-8">
         <div className="grid md:grid-cols-3 gap-4">
@@ -59,7 +91,7 @@ export default function FinancialsPage() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(7350000)}</div>
+                    <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
                     <p className="text-xs text-muted-foreground">Dari transaksi penjualan</p>
                 </CardContent>
             </Card>
@@ -69,7 +101,7 @@ export default function FinancialsPage() {
                     <TrendingDown className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(800000)}</div>
+                    <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
                     <p className="text-xs text-muted-foreground">Termasuk bahan baku & operasional</p>
                 </CardContent>
             </Card>
@@ -79,7 +111,7 @@ export default function FinancialsPage() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(6550000)}</div>
+                    <div className="text-2xl font-bold">{formatCurrency(netProfit)}</div>
                      <p className="text-xs text-muted-foreground">Total Pemasukan - Total Pengeluaran</p>
                 </CardContent>
             </Card>
@@ -93,7 +125,7 @@ export default function FinancialsPage() {
                         <CardTitle>Catatan Modal</CardTitle>
                         <CardDescription>Riwayat penambahan modal.</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Tambah Modal</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('capital')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Modal</Button>
                 </div>
             </CardHeader>
             <CardContent>
@@ -112,7 +144,7 @@ export default function FinancialsPage() {
                         <CardTitle>Catatan Pengeluaran</CardTitle>
                         <CardDescription>Riwayat pengeluaran toko.</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Tambah Pengeluaran</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('expense')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Pengeluaran</Button>
                 </div>
             </CardHeader>
             <CardContent>
@@ -127,5 +159,12 @@ export default function FinancialsPage() {
         </div>
       </div>
     </AdminLayout>
+    <FinancialsEntryDialog
+        isOpen={isDialogOpen}
+        onClose={() => setDialogOpen(false)}
+        type={dialogType}
+        onSave={handleSaveEntry}
+    />
+    </>
   );
 }
