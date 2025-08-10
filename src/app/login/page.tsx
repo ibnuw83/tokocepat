@@ -27,6 +27,14 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password tidak boleh kosong"),
 });
 
+// Mock user data that would typically come from a database
+const validUsers = [
+  { username: "admin", password: "admin", role: "Administrator" },
+  { username: "kasir01", password: "kasir01", role: "Kasir" },
+  { username: "kasir02", password: "kasir02", role: "Kasir" },
+];
+
+
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -57,13 +65,16 @@ export default function LoginPage() {
   });
 
   function onSubmit(data: z.infer<typeof loginSchema>) {
-    // For now, we only accept admin/admin
-    if (data.username === "admin" && data.password === "admin") {
+    const user = validUsers.find(
+        (u) => u.username === data.username && u.password === data.password
+    );
+
+    if (user) {
       sessionStorage.setItem("isLoggedIn", "true");
-      sessionStorage.setItem("username", data.username);
+      sessionStorage.setItem("username", user.username);
       toast({
         title: "Login Berhasil",
-        description: `Selamat datang, ${data.username}!`,
+        description: `Selamat datang, ${user.username}!`,
       });
       router.push("/");
     } else {
