@@ -63,17 +63,14 @@ export default function FinancialsPage() {
 
     const loadDataFromStorage = React.useCallback(() => {
         const storedCapital = localStorage.getItem("capital");
-        setCapital(storedCapital ? JSON.parse(storedCapital) : initialCapital);
+        setCapital(storedCapital ? JSON.parse(storedCapital) : []);
         
         const storedExpenses = localStorage.getItem("expenses");
-        setExpenses(storedExpenses ? JSON.parse(storedExpenses) : initialExpenses);
+        setExpenses(storedExpenses ? JSON.parse(storedExpenses) : []);
         
         const storedTransactions = localStorage.getItem("transactions");
         setTransactions(storedTransactions ? JSON.parse(storedTransactions) : []);
-
-        if (!storedCapital) saveDataToStorage({ capital: initialCapital });
-        if (!storedExpenses) saveDataToStorage({ expenses: initialExpenses });
-    }, [saveDataToStorage]);
+    }, []);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -83,12 +80,20 @@ export default function FinancialsPage() {
             setIsMounted(true);
             loadDataFromStorage();
             
+            // Initialize with default data if local storage is empty
+            if (!localStorage.getItem("capital")) {
+                saveDataToStorage({ capital: initialCapital });
+            }
+            if (!localStorage.getItem("expenses")) {
+                saveDataToStorage({ expenses: initialExpenses });
+            }
+
             window.addEventListener('storage', loadDataFromStorage);
             return () => {
                 window.removeEventListener('storage', loadDataFromStorage);
             }
         }
-    }, [router, loadDataFromStorage]);
+    }, [router, loadDataFromStorage, saveDataToStorage]);
     
     if (!isMounted) {
         return (
