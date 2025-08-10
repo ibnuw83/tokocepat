@@ -27,17 +27,73 @@ interface ReceiptDialogProps {
 }
 
 export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount, total, formatCurrency, onConfirm, customerName }: ReceiptDialogProps) {
+  
+  // CSS for thermal printer styling
+  const printStyles = `
+    @media print {
+      @page {
+        margin: 0;
+        size: 58mm auto; /* Adjust width as needed, 58mm is common */
+      }
+      body {
+        margin: 0;
+        background: #fff;
+      }
+      .print-container {
+        padding: 5px;
+        font-family: 'Courier New', monospace;
+        font-size: 10px; /* Adjust font size for small paper */
+        color: #000;
+        width: 100%;
+      }
+      .print-header, .print-footer {
+        text-align: center;
+      }
+      .print-item-list, .print-summary {
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+      .print-item {
+        display: flex;
+        justify-content: space-between;
+      }
+      .print-item .item-info {
+        display: block;
+      }
+      .print-separator {
+        border-top: 1px dashed #000;
+        margin: 10px 0;
+      }
+      .print-total {
+        font-weight: bold;
+      }
+    }
+  `;
+  
   const handlePrint = () => {
     // This part is for printing visuals. The actual stock update happens onConfirm.
     const printContent = document.getElementById('receipt-content');
     if (printContent) {
       const receiptHtml = printContent.querySelector('#receipt-visual')?.innerHTML;
       if (receiptHtml) {
-        const originalContents = document.body.innerHTML;
-        document.body.innerHTML = `<div class="print-container">${receiptHtml}</div>`;
-        window.print();
-        document.body.innerHTML = originalContents;
-        // We don't reload here, allowing the user to confirm the transaction.
+        const printWindow = window.open('', '_blank', 'width=300,height=500');
+        printWindow?.document.write(`
+          <html>
+            <head>
+              <title>Cetak Struk</title>
+              <style>${printStyles}</style>
+            </head>
+            <body>
+              <div class="print-container">${receiptHtml}</div>
+            </body>
+          </html>
+        `);
+        printWindow?.document.close();
+        printWindow?.focus();
+        setTimeout(() => {
+             printWindow?.print();
+             printWindow?.close();
+        }, 250); // Delay to allow content to render
       }
     }
   };
@@ -45,31 +101,32 @@ export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" id="receipt-content">
+          {/* This is the visual representation inside the dialog, not for direct printing anymore */}
           <div id="receipt-visual">
-            <DialogHeader className="print:text-black">
-            <DialogTitle className="text-center text-2xl font-headline">Toko Cepat</DialogTitle>
-            <p className="text-center text-sm text-muted-foreground">
-                {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-            </p>
-            </DialogHeader>
-            <Separator className="my-4" />
-            <div className="text-sm print:text-black">
+            <div className="print-header">
+                <DialogTitle className="text-center text-2xl font-headline">Toko Cepat</DialogTitle>
+                <p className="text-center text-sm text-muted-foreground">
+                    {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                </p>
+            </div>
+            <Separator className="my-4 print-separator" />
+            <div className="text-sm">
                 Pelanggan: <span className="font-semibold">{customerName}</span>
             </div>
-            <Separator className="my-4" />
-            <div className="my-4 space-y-2 print:text-black">
+            <Separator className="my-4 print-separator" />
+            <div className="my-4 space-y-2 print-item-list">
             {items.map(item => (
-                <div key={item.id} className="flex justify-between items-center text-sm">
+                <div key={item.id} className="flex justify-between items-center text-sm print-item">
                 <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-muted-foreground">{item.quantity} x {formatCurrency(item.price)}</p>
+                    <p className="font-medium item-info">{item.name}</p>
+                    <p className="text-muted-foreground item-info">{item.quantity} x {formatCurrency(item.price)}</p>
                 </div>
                 <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
                 </div>
             ))}
             </div>
-            <Separator className="my-4"/>
-            <div className="my-4 space-y-2 print:text-black">
+            <Separator className="my-4 print-separator"/>
+            <div className="my-4 space-y-2 print-summary">
             <div className="flex justify-between text-sm">
                 <p>Subtotal</p>
                 <p>{formatCurrency(subtotal)}</p>
@@ -78,13 +135,13 @@ export function ReceiptDialog({ isOpen, onClose, items, subtotal, discountAmount
                 <p>Diskon</p>
                 <p>-{formatCurrency(discountAmount)}</p>
             </div>
-            <div className="flex justify-between font-bold text-base">
+            <div className="flex justify-between font-bold text-base print-total">
                 <p>Total</p>
                 <p>{formatCurrency(total)}</p>
             </div>
             </div>
-            <Separator className="my-4"/>
-            <p className="text-center text-xs text-muted-foreground pt-4 print:text-black">
+            <Separator className="my-4 print-separator"/>
+            <p className="text-center text-xs text-muted-foreground pt-4 print-footer">
             Terima kasih telah berbelanja!
             </p>
         </div>
