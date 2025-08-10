@@ -105,38 +105,38 @@ export function ReceiptDialog({
           font-size: ${is80mm ? '11pt' : '9pt'};
           margin: 0;
         }
-        .print-item-list, .print-summary {
-          margin-top: 8px;
-          margin-bottom: 8px;
-        }
-        .print-row {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: ${is80mm ? '12px' : '8px'};
-        }
-        .print-row .left {
-          text-align: left;
-          word-break: break-word;
-        }
-        .print-row .right {
-          text-align: right;
-          white-space: nowrap;
-        }
-        .item-qty-price {
-          font-size: ${is80mm ? '10pt' : '8pt'};
-          color: #555;
-        }
         .print-separator {
           border-top: 1px dashed #000;
           margin: 8px 0;
         }
-        .print-total .right {
-          font-weight: bold;
-          font-size: ${is80mm ? '14pt' : '12pt'};
-        }
         .print-footer {
             white-space: pre-wrap;
             font-size: ${is80mm ? '10pt' : '8pt'};
+        }
+        .receipt-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .receipt-table td {
+          padding: 2px 0;
+          vertical-align: top;
+        }
+        .receipt-table .col-left {
+          text-align: left;
+          word-break: break-word;
+        }
+        .receipt-table .col-right {
+          text-align: right;
+          white-space: nowrap;
+        }
+        .item-details {
+          font-size: ${is80mm ? '10pt' : '8pt'};
+          color: #555;
+        }
+        .total-row td {
+            font-weight: bold;
+            padding-top: 4px;
+            font-size: ${is80mm ? '14pt' : '12pt'};
         }
       }
     `;
@@ -185,56 +185,69 @@ export function ReceiptDialog({
               </p>
           </div>
           <Separator className="my-4 print-separator" />
-          <div className="text-sm">
-            <div className="print-row">
-              <span className="left">Pelanggan</span>
-              <span className="right font-semibold">{customerName}</span>
-            </div>
-          </div>
+          
+           <table className="w-full text-sm receipt-table">
+              <tbody>
+                <tr>
+                    <td className="col-left">Pelanggan</td>
+                    <td className="col-right font-semibold">{customerName}</td>
+                </tr>
+              </tbody>
+           </table>
+
           <Separator className="my-4 print-separator" />
-          <div className="my-4 space-y-3 print-item-list">
-          {items.map(item => (
-              <div key={item.id} className="text-sm">
-                  <div className="print-row">
-                      <div className="left font-medium">{item.name}</div>
-                      <div className="right font-medium">{formatCurrency(item.quantity * item.price)}</div>
-                  </div>
-                  <div className="print-row">
-                    <div className="left text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</div>
-                  </div>
-              </div>
-          ))}
-          </div>
+
+           <table className="w-full text-sm receipt-table">
+              <tbody>
+                {items.map(item => (
+                  <React.Fragment key={item.id}>
+                    <tr>
+                      <td className="col-left font-medium">{item.name}</td>
+                      <td className="col-right font-medium">{formatCurrency(item.quantity * item.price)}</td>
+                    </tr>
+                    <tr>
+                      <td className="col-left item-details pb-2">{item.quantity} x {formatCurrency(item.price)}</td>
+                      <td className="col-right"></td>
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+           </table>
+
           <Separator className="my-4 print-separator"/>
-          <div className="my-4 space-y-2 print-summary">
-              <div className="print-row text-sm">
-                  <span className="left">Subtotal</span>
-                  <span className="right">{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="print-row text-sm">
-                  <span className="left">Diskon</span>
-                  <span className="right">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : `${formatCurrency(0)}`}</span>
-              </div>
-              <div className="print-row font-bold text-base print-total">
-                  <span className="left">Total</span>
-                  <span className="right">{formatCurrency(total)}</span>
-              </div>
-              <Separator className="my-2 print-separator"/>
-              <div className="print-row text-sm">
-                  <span className="left">Pembayaran ({paymentMethod})</span>
-                  <span className="right">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</span>
-              </div>
-              <div className="print-row text-sm">
-                  <span className="left">Kembalian</span>
-                  <span className="right">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</span>
-              </div>
-              {paymentMethod !== 'Tunai' && paymentRef && (
-                  <div className="print-row text-sm">
-                      <span className="left">No. Ref</span>
-                      <span className="right">{paymentRef}</span>
-                  </div>
-              )}
-          </div>
+          
+           <table className="w-full text-sm receipt-table">
+              <tbody>
+                  <tr>
+                    <td className="col-left">Subtotal</td>
+                    <td className="col-right">{formatCurrency(subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td className="col-left">Diskon</td>
+                    <td className="col-right">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : `${formatCurrency(0)}`}</td>
+                  </tr>
+                  <tr className="total-row">
+                    <td className="col-left">Total</td>
+                    <td className="col-right">{formatCurrency(total)}</td>
+                  </tr>
+                   <tr><td colSpan={2}><Separator className="my-2 print-separator"/></td></tr>
+                  <tr>
+                    <td className="col-left">Pembayaran ({paymentMethod})</td>
+                    <td className="col-right">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</td>
+                  </tr>
+                  <tr>
+                    <td className="col-left">Kembalian</td>
+                    <td className="col-right">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</td>
+                  </tr>
+                   {paymentMethod !== 'Tunai' && paymentRef && (
+                      <tr>
+                          <td className="col-left">No. Ref</td>
+                          <td className="col-right">{paymentRef}</td>
+                      </tr>
+                  )}
+              </tbody>
+           </table>
+
           <Separator className="my-4 print-separator"/>
           <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
             {receiptFooter}
