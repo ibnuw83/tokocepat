@@ -249,7 +249,10 @@ export default function UsersPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setUserToToggle(null)}>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmToggleStatus}>Ya, Lanjutkan</AlertDialogAction>
+                <AlertDialogAction 
+                    onClick={handleConfirmToggleStatus}
+                    className={userToToggle?.status === 'active' ? "bg-destructive hover:bg-destructive/90" : "bg-green-600 hover:bg-green-700 text-white"}
+                >Ya, Lanjutkan</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
