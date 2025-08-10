@@ -138,6 +138,7 @@ export function ReceiptDialog({
         .item-details {
           font-size: ${is80mm ? '8pt' : '6pt'};
           color: #555;
+          padding-top: 0;
           padding-bottom: 4px;
         }
         .total-row td {
@@ -187,8 +188,8 @@ export function ReceiptDialog({
                 {logo && <Image src={logo} alt="Logo Toko" width={32} height={32} />}
                 <h1 className="text-xl font-bold">{storeName}</h1>
               </div>
-              {storeAddress && <p className="text-xs text-muted-foreground">{storeAddress}</p>}
-              <p className="text-xs text-muted-foreground mt-2">
+              {storeAddress && <p className="text-xs text-muted-foreground text-center">{storeAddress}</p>}
+              <p className="text-xs text-muted-foreground mt-2 text-center">
                   {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
               </p>
           </div>
