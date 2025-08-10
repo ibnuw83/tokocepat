@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import type { InventoryItem } from '@/app/admin/inventory/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface EditItemDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface EditItemDialogProps {
 const formSchema = z.object({
   barcode: z.string().min(1, { message: "Kode barang tidak boleh kosong." }),
   name: z.string().min(1, { message: "Nama barang tidak boleh kosong." }),
+  category: z.string().min(1, { message: "Kategori harus dipilih." }),
   costPrice: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   price: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   stock: z.coerce.number().min(0, { message: "Stok harus angka positif." }),
@@ -80,19 +82,44 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
                         </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nama Barang</FormLabel>
-                            <FormControl>
-                                <Input placeholder="cth: Kopi Americano" {...field} />
-                            </FormControl>
-                             <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                 <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nama Barang</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="cth: Kopi Americano" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Kategori</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih kategori" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Minuman">Minuman</SelectItem>
+                                        <SelectItem value="Makanan">Makanan</SelectItem>
+                                        <SelectItem value="Snack">Snack</SelectItem>
+                                        <SelectItem value="Lainnya">Lainnya</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -161,3 +188,5 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
     </Dialog>
   );
 }
+
+    

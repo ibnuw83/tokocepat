@@ -19,6 +19,17 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+
+const formSchema = z.object({
+  barcode: z.string().min(1, { message: "Kode barang tidak boleh kosong." }),
+  name: z.string().min(1, { message: "Nama barang tidak boleh kosong." }),
+  category: z.string().min(1, { message: "Kategori harus dipilih." }),
+  costPrice: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
+  price: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
+  stock: z.coerce.number().min(0, { message: "Stok harus angka positif." }),
+  lowStockThreshold: z.coerce.number().min(0, { message: "Batas stok harus angka positif." }),
+});
 
 interface AddItemDialogProps {
   isOpen: boolean;
@@ -28,15 +39,6 @@ interface AddItemDialogProps {
   setBarcodeSetter: (setter: (barcode: string) => void) => void;
 }
 
-const formSchema = z.object({
-  barcode: z.string().min(1, { message: "Kode barang tidak boleh kosong." }),
-  name: z.string().min(1, { message: "Nama barang tidak boleh kosong." }),
-  costPrice: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
-  price: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
-  stock: z.coerce.number().min(0, { message: "Stok harus angka positif." }),
-  lowStockThreshold: z.coerce.number().min(0, { message: "Batas stok harus angka positif." }),
-});
-
 export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarcodeSetter }: AddItemDialogProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,6 +46,7 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
     defaultValues: {
       barcode: "",
       name: "",
+      category: "",
       costPrice: 0,
       price: 0,
       stock: 0,
@@ -76,6 +79,7 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
       form.reset({
         barcode: "",
         name: "",
+        category: "",
         costPrice: 0,
         price: 0,
         stock: 0,
@@ -112,19 +116,44 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
                         </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Nama Barang</FormLabel>
-                            <FormControl>
-                                <Input placeholder="cth: Kopi Americano" {...field} />
-                            </FormControl>
-                             <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                 <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nama Barang</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="cth: Kopi Americano" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Kategori</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih kategori" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Minuman">Minuman</SelectItem>
+                                        <SelectItem value="Makanan">Makanan</SelectItem>
+                                        <SelectItem value="Snack">Snack</SelectItem>
+                                        <SelectItem value="Lainnya">Lainnya</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <FormField
                         control={form.control}
@@ -193,3 +222,5 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
     </Dialog>
   );
 }
+
+    

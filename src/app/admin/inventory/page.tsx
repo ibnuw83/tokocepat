@@ -26,14 +26,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge";
 
 
 // Mock data for inventory
 const initialInventoryItems = [
-  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", stock: 50, costPrice: 12000, price: 18000, lowStockThreshold: 10 },
-  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", stock: 8, costPrice: 7000, price: 10000, lowStockThreshold: 5 },
-  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", stock: 80, costPrice: 5000, price: 8000, lowStockThreshold: 20 },
-  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", stock: 42, costPrice: 4000, price: 7000, lowStockThreshold: 10 },
+  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", category: "Minuman", stock: 50, costPrice: 12000, price: 18000, lowStockThreshold: 10 },
+  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", category: "Makanan", stock: 8, costPrice: 7000, price: 10000, lowStockThreshold: 5 },
+  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", category: "Minuman", stock: 80, costPrice: 5000, price: 8000, lowStockThreshold: 20 },
+  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", category: "Makanan", stock: 42, costPrice: 4000, price: 7000, lowStockThreshold: 10 },
 ];
 
 export type InventoryItem = typeof initialInventoryItems[0];
@@ -104,7 +105,7 @@ export default function InventoryPage() {
         });
     }
 
-    const handleAddNewItem = (values: { barcode: string; name: string; costPrice: number; price: number; stock: number; lowStockThreshold: number }) => {
+    const handleAddNewItem = (values: Omit<InventoryItem, 'id'>) => {
         const newItem: InventoryItem = {
             id: `ITEM${Date.now()}`,
             ...values
@@ -197,6 +198,7 @@ export default function InventoryPage() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>Nama Barang</TableHead>
+                        <TableHead>Kategori</TableHead>
                         <TableHead>Kode Barcode</TableHead>
                         <TableHead>Harga Pokok</TableHead>
                         <TableHead>Harga Jual</TableHead>
@@ -208,6 +210,7 @@ export default function InventoryPage() {
                         {filteredItems.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
                             <TableCell>{item.barcode}</TableCell>
                             <TableCell>{formatCurrency(item.costPrice)}</TableCell>
                             <TableCell>{formatCurrency(item.price)}</TableCell>
