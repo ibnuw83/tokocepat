@@ -80,7 +80,7 @@ export function ReceiptDialog({
       .print-container {
         padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 11pt;
+        font-size: 12pt;
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -93,11 +93,11 @@ export function ReceiptDialog({
         margin: 0 auto 5px;
       }
       .print-header h1 {
-        font-size: 14pt;
+        font-size: 16pt;
         margin: 0;
       }
        .print-header p {
-        font-size: 10pt;
+        font-size: 11pt;
         margin: 0;
       }
       .print-item-list, .print-summary {
@@ -107,7 +107,7 @@ export function ReceiptDialog({
       .print-item {
         display: grid;
         grid-template-columns: 1fr auto;
-        gap: 5px;
+        gap-x: 10px;
       }
       .print-item .item-name {
         word-break: break-all;
@@ -116,16 +116,17 @@ export function ReceiptDialog({
          text-align: right;
       }
       .print-item .item-qty-price {
-        font-size: 10pt;
+        font-size: 11pt;
         grid-column: 1 / -1;
       }
       .print-summary-line {
          display: grid;
-         grid-template-columns: 1fr max-content;
-         gap: 5px;
+         grid-template-columns: auto 1fr;
+         gap-x: 10px;
       }
       .print-summary-line .summary-value {
         text-align: right;
+        white-space: nowrap;
       }
       .print-separator {
         border-top: 1px dashed #000;
@@ -133,11 +134,11 @@ export function ReceiptDialog({
       }
       .print-total {
         font-weight: bold;
-        font-size: 12pt;
+        font-size: 13pt;
       }
       .print-footer {
           white-space: pre-wrap;
-          font-size: 10pt;
+          font-size: 11pt;
       }
     }
   `;
@@ -200,29 +201,29 @@ export function ReceiptDialog({
             </div>
             <Separator className="my-4 print-separator"/>
             <div className="my-4 space-y-2 print-summary">
-                <div className="flex justify-between text-sm print-summary-line">
+                <div className="print-summary-line text-sm">
                     <p>Subtotal</p>
                     <p className="summary-value">{formatCurrency(subtotal)}</p>
                 </div>
-                <div className="flex justify-between text-sm print-summary-line">
+                <div className="print-summary-line text-sm">
                     <p>Diskon</p>
-                    <p className="summary-value">-{formatCurrency(discountAmount)}</p>
+                    <p className="summary-value">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : formatCurrency(0)}</p>
                 </div>
-                <div className="flex justify-between font-bold text-base print-total print-summary-line">
+                <div className="print-summary-line font-bold text-base print-total">
                     <p>Total</p>
                     <p className="summary-value">{formatCurrency(total)}</p>
                 </div>
                 <Separator className="my-2 print-separator"/>
-                <div className="flex justify-between text-sm print-summary-line">
+                <div className="print-summary-line text-sm">
                     <p>Pembayaran ({paymentMethod})</p>
                     <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
                 </div>
-                <div className="flex justify-between text-sm print-summary-line">
+                <div className="print-summary-line text-sm">
                     <p>Kembalian</p>
                     <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
                 </div>
                 {paymentMethod !== 'Tunai' && paymentRef && (
-                    <div className="flex justify-between text-sm print-summary-line">
+                    <div className="print-summary-line text-sm">
                         <p>No. Ref</p>
                         <p className="summary-value">{paymentRef}</p>
                     </div>
