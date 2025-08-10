@@ -109,13 +109,19 @@ export default function SettingsPage() {
      // --- Auto-saving useEffects ---
     React.useEffect(() => {
         if(isMounted) {
-            saveSettings({ name: storeName, address: storeAddress, logo: logo });
+            const debounceTimer = setTimeout(() => {
+                 saveSettings({ name: storeName, address: storeAddress, logo: logo });
+            }, 500); // Debounce to avoid too many writes
+            return () => clearTimeout(debounceTimer);
         }
     }, [storeName, storeAddress, logo, isMounted, saveSettings]);
 
     React.useEffect(() => {
         if (isMounted && Object.keys(categories).length > 0) {
-            saveSettings({ categories: categories });
+             const debounceTimer = setTimeout(() => {
+                saveSettings({ categories: categories });
+            }, 500); // Debounce to avoid too many writes
+            return () => clearTimeout(debounceTimer);
         }
     }, [categories, isMounted, saveSettings]);
     
@@ -285,7 +291,7 @@ export default function SettingsPage() {
              <div className="space-y-2">
                 <Label>Logo Toko</Label>
                 <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 rounded-md border flex items-center justify-center bg-muted overflow-hidden">
+                    <div className="w-24 h-24 rounded-md flex items-center justify-center bg-muted overflow-hidden">
                        {logo ? (
                             <Image src={logo} alt="Logo Preview" width={96} height={96} className="object-contain" />
                         ) : (
@@ -330,8 +336,8 @@ export default function SettingsPage() {
             <Accordion type="multiple" className="w-full">
                  {Object.entries(categories).map(([category, subcategories]) => (
                     <AccordionItem value={category} key={category}>
-                        <div className="flex justify-between items-center w-full py-4">
-                            <AccordionTrigger className="flex-grow p-0 hover:no-underline">
+                        <div className="flex justify-between items-center w-full py-4 border-b">
+                            <AccordionTrigger className="flex-grow p-0 hover:no-underline border-none">
                                <div className="flex items-center gap-2">
                                     <span className="font-semibold">{category}</span>
                                     <Badge variant="secondary">{Array.isArray(subcategories) ? subcategories.length : 0} sub</Badge>
@@ -439,5 +445,3 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
-
-    
