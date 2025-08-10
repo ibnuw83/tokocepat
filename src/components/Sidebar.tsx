@@ -5,13 +5,11 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, CreditCard, Users, Settings, Box } from "lucide-react";
+import { CreditCard, FileText, Box } from "lucide-react";
 
 const menuItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/transactions", icon: CreditCard, label: "Kasir" },
-  { href: "/admin/users", icon: Users, label: "Pengguna" },
-  { href: "/admin/settings", icon: Settings, label: "Pengaturan" },
+  { href: "/admin/reports", icon: FileText, label: "Laporan Transaksi" },
 ];
 
 
