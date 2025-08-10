@@ -87,22 +87,27 @@ export function ReceiptDialog({
           font-family: 'Courier New', monospace;
           color: #000;
           width: 100%;
-          line-height: 1.4;
-          font-size: ${is80mm ? '12pt' : '10pt'};
+          font-size: ${is80mm ? '10pt' : '8pt'};
         }
-        .print-header, .print-footer {
-          text-align: center;
+        .print-header { text-align: center; }
+        .print-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 5px;
         }
-        .print-header img {
-          max-width: 40%;
-          margin: 0 auto 5px;
+        .print-header-top img {
+          width: ${is80mm ? '32px' : '24px'};
+          height: ${is80mm ? '32px' : '24px'};
         }
         .print-header h1 {
-          font-size: ${is80mm ? '18pt' : '14pt'};
+          font-size: ${is80mm ? '16pt' : '12pt'};
           margin: 0;
+          font-weight: bold;
         }
          .print-header p {
-          font-size: ${is80mm ? '11pt' : '9pt'};
+          font-size: ${is80mm ? '9pt' : '7pt'};
           margin: 0;
         }
         .print-separator {
@@ -111,7 +116,8 @@ export function ReceiptDialog({
         }
         .print-footer {
             white-space: pre-wrap;
-            font-size: ${is80mm ? '10pt' : '8pt'};
+            text-align: center;
+            font-size: ${is80mm ? '9pt' : '7pt'};
         }
         .receipt-table {
           width: 100%;
@@ -130,13 +136,13 @@ export function ReceiptDialog({
           white-space: nowrap;
         }
         .item-details {
-          font-size: ${is80mm ? '10pt' : '8pt'};
+          font-size: ${is80mm ? '8pt' : '6pt'};
           color: #555;
+          padding-bottom: 4px;
         }
         .total-row td {
             font-weight: bold;
             padding-top: 4px;
-            font-size: ${is80mm ? '14pt' : '12pt'};
         }
       }
     `;
@@ -176,15 +182,17 @@ export function ReceiptDialog({
           <DialogTitle>Pratinjau Struk</DialogTitle>
         </DialogHeader>
         <div id="receipt-visual">
-          <div className="print-header text-center">
-              {logo && <Image src={logo} alt="Logo Toko" width={48} height={48} className="mx-auto mb-2" />}
-              <h1 className="text-xl font-bold">{storeName}</h1>
+          <div className="print-header">
+              <div className="flex items-center justify-center gap-2 mb-2 print-header-top">
+                {logo && <Image src={logo} alt="Logo Toko" width={32} height={32} />}
+                <h1 className="text-xl font-bold">{storeName}</h1>
+              </div>
               {storeAddress && <p className="text-xs text-muted-foreground">{storeAddress}</p>}
               <p className="text-xs text-muted-foreground mt-2">
                   {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
               </p>
           </div>
-          <Separator className="my-4 print-separator" />
+          <div className="print-separator my-4" />
           
            <table className="w-full text-sm receipt-table">
               <tbody>
@@ -195,7 +203,7 @@ export function ReceiptDialog({
               </tbody>
            </table>
 
-          <Separator className="my-4 print-separator" />
+          <div className="print-separator my-4" />
 
            <table className="w-full text-sm receipt-table">
               <tbody>
@@ -206,7 +214,7 @@ export function ReceiptDialog({
                       <td className="col-right font-medium">{formatCurrency(item.quantity * item.price)}</td>
                     </tr>
                     <tr>
-                      <td className="col-left item-details pb-2">{item.quantity} x {formatCurrency(item.price)}</td>
+                      <td className="col-left item-details">{item.quantity} x {formatCurrency(item.price)}</td>
                       <td className="col-right"></td>
                     </tr>
                   </React.Fragment>
@@ -214,7 +222,7 @@ export function ReceiptDialog({
               </tbody>
            </table>
 
-          <Separator className="my-4 print-separator"/>
+          <div className="print-separator my-4"/>
           
            <table className="w-full text-sm receipt-table">
               <tbody>
@@ -226,11 +234,11 @@ export function ReceiptDialog({
                     <td className="col-left">Diskon</td>
                     <td className="col-right">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : `${formatCurrency(0)}`}</td>
                   </tr>
-                  <tr className="total-row">
+                  <tr className="total-row font-bold">
                     <td className="col-left">Total</td>
                     <td className="col-right">{formatCurrency(total)}</td>
                   </tr>
-                   <tr><td colSpan={2}><Separator className="my-2 print-separator"/></td></tr>
+                   <tr><td colSpan={2}><div className="print-separator my-2"/></td></tr>
                   <tr>
                     <td className="col-left">Pembayaran ({paymentMethod})</td>
                     <td className="col-right">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</td>
@@ -248,10 +256,10 @@ export function ReceiptDialog({
               </tbody>
            </table>
 
-          <Separator className="my-4 print-separator"/>
-          <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
+          <div className="print-separator my-4"/>
+          <div className="print-footer text-xs text-muted-foreground whitespace-pre-wrap text-center">
             {receiptFooter}
-          </p>
+          </div>
       </div>
         <DialogFooter className="print:hidden sm:justify-between gap-2 mt-4">
           <Button onClick={handlePrint} variant="outline" className="transition-transform active:scale-95 w-full sm:w-auto">
