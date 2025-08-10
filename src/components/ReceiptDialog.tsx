@@ -80,7 +80,7 @@ export function ReceiptDialog({
       .print-container {
         padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 10pt;
+        font-size: 11pt;
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -93,11 +93,11 @@ export function ReceiptDialog({
         margin: 0 auto 5px;
       }
       .print-header h1 {
-        font-size: 12pt;
+        font-size: 14pt;
         margin: 0;
       }
        .print-header p {
-        font-size: 9pt;
+        font-size: 10pt;
         margin: 0;
       }
       .print-item-list, .print-summary {
@@ -116,12 +116,12 @@ export function ReceiptDialog({
          text-align: right;
       }
       .print-item .item-qty-price {
-        font-size: 9pt;
+        font-size: 10pt;
         grid-column: 1 / -1;
       }
       .print-summary-line {
          display: grid;
-         grid-template-columns: 1fr auto;
+         grid-template-columns: 1fr max-content;
          gap: 5px;
       }
       .print-summary-line .summary-value {
@@ -133,11 +133,11 @@ export function ReceiptDialog({
       }
       .print-total {
         font-weight: bold;
-        font-size: 11pt;
+        font-size: 12pt;
       }
       .print-footer {
           white-space: pre-wrap;
-          font-size: 9pt;
+          font-size: 10pt;
       }
     }
   `;
@@ -200,33 +200,33 @@ export function ReceiptDialog({
             </div>
             <Separator className="my-4 print-separator"/>
             <div className="my-4 space-y-2 print-summary">
-            <div className="flex justify-between text-sm print-summary-line">
-                <p>Subtotal</p>
-                <p className="summary-value">{formatCurrency(subtotal)}</p>
-            </div>
-            <div className="flex justify-between text-sm print-summary-line">
-                <p>Diskon</p>
-                <p className="summary-value">-{formatCurrency(discountAmount)}</p>
-            </div>
-            <div className="flex justify-between font-bold text-base print-total print-summary-line">
-                <p>Total</p>
-                <p className="summary-value">{formatCurrency(total)}</p>
-            </div>
-             <Separator className="my-2 print-separator"/>
-             <div className="flex justify-between text-sm print-summary-line">
-                <p>Pembayaran ({paymentMethod})</p>
-                <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
-            </div>
-             <div className="flex justify-between text-sm print-summary-line">
-                <p>Kembalian</p>
-                <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
-            </div>
-            {paymentMethod !== 'Tunai' && paymentRef && (
                 <div className="flex justify-between text-sm print-summary-line">
-                    <p>No. Ref</p>
-                    <p className="summary-value">{paymentRef}</p>
+                    <p>Subtotal</p>
+                    <p className="summary-value">{formatCurrency(subtotal)}</p>
                 </div>
-            )}
+                <div className="flex justify-between text-sm print-summary-line">
+                    <p>Diskon</p>
+                    <p className="summary-value">-{formatCurrency(discountAmount)}</p>
+                </div>
+                <div className="flex justify-between font-bold text-base print-total print-summary-line">
+                    <p>Total</p>
+                    <p className="summary-value">{formatCurrency(total)}</p>
+                </div>
+                <Separator className="my-2 print-separator"/>
+                <div className="flex justify-between text-sm print-summary-line">
+                    <p>Pembayaran ({paymentMethod})</p>
+                    <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
+                </div>
+                <div className="flex justify-between text-sm print-summary-line">
+                    <p>Kembalian</p>
+                    <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
+                </div>
+                {paymentMethod !== 'Tunai' && paymentRef && (
+                    <div className="flex justify-between text-sm print-summary-line">
+                        <p>No. Ref</p>
+                        <p className="summary-value">{paymentRef}</p>
+                    </div>
+                )}
             </div>
             <Separator className="my-4 print-separator"/>
             <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
