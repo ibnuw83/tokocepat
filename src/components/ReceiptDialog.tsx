@@ -155,6 +155,9 @@ export function ReceiptDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" id="receipt-content">
+        <DialogHeader>
+            <DialogTitle>Pratinjau Struk</DialogTitle>
+        </DialogHeader>
           <div id="receipt-visual">
             <div className="print-header text-center">
                 {logo && <Image src={logo} alt="Logo Toko" width={48} height={48} className="mx-auto mb-2" />}
