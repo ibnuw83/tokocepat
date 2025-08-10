@@ -7,18 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { PlusCircle, ArrowUp, ArrowDown, TriangleAlert } from "lucide-react";
 import { StockAdjustmentDialog } from "@/components/StockAdjustmentDialog";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Mock data for inventory
 const initialInventoryItems = [
-  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", stock: 50, price: 18000 },
-  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", stock: 35, price: 10000 },
-  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", stock: 80, price: 8000 },
-  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", stock: 42, price: 7000 },
+  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", stock: 50, costPrice: 12000, price: 18000, lowStockThreshold: 10 },
+  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", stock: 8, costPrice: 7000, price: 10000, lowStockThreshold: 5 },
+  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", stock: 80, costPrice: 5000, price: 8000, lowStockThreshold: 20 },
+  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", stock: 42, costPrice: 4000, price: 7000, lowStockThreshold: 10 },
 ];
 
 export type InventoryItem = typeof initialInventoryItems[0];
@@ -80,13 +81,10 @@ export default function InventoryPage() {
         });
     }
 
-    const handleAddNewItem = (barcode: string, name: string, price: number, stock: number) => {
+    const handleAddNewItem = (values: { barcode: string; name: string; costPrice: number; price: number; stock: number; lowStockThreshold: number }) => {
         const newItem: InventoryItem = {
             id: `ITEM${Date.now()}`,
-            barcode,
-            name,
-            price,
-            stock
+            ...values
         };
         setInventoryItems(prev => [...prev, newItem]);
     };
@@ -133,21 +131,37 @@ export default function InventoryPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                        <TableHead>ID Barang</TableHead>
-                        <TableHead>Kode Barcode</TableHead>
                         <TableHead>Nama Barang</TableHead>
-                        <TableHead>Harga Satuan</TableHead>
+                        <TableHead>Kode Barcode</TableHead>
+                        <TableHead>Harga Pokok</TableHead>
+                        <TableHead>Harga Jual</TableHead>
                         <TableHead className="text-right">Jumlah Stok</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {inventoryItems.map((item) => (
                         <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.id}</TableCell>
+                            <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.barcode}</TableCell>
-                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{formatCurrency(item.costPrice)}</TableCell>
                             <TableCell>{formatCurrency(item.price)}</TableCell>
-                            <TableCell className="text-right font-semibold">{item.stock}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                                <div className="flex items-center justify-end gap-2">
+                                     {item.stock <= item.lowStockThreshold && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                     <TriangleAlert className="h-4 w-4 text-destructive" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Stok hampir habis!</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
+                                    <span>{item.stock}</span>
+                                </div>
+                            </TableCell>
                         </TableRow>
                         ))}
                     </TableBody>

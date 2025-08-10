@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AddItemDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (barcode: string, name: string, price: number, stock: number) => void;
+  onSave: (values: z.infer<typeof formSchema>) => void;
   onOpenScanner: () => void;
   setBarcodeSetter: (setter: (barcode: string) => void) => void;
 }
@@ -31,8 +31,10 @@ interface AddItemDialogProps {
 const formSchema = z.object({
   barcode: z.string().min(1, { message: "Kode barang tidak boleh kosong." }),
   name: z.string().min(1, { message: "Nama barang tidak boleh kosong." }),
+  costPrice: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   price: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   stock: z.coerce.number().min(0, { message: "Stok harus angka positif." }),
+  lowStockThreshold: z.coerce.number().min(0, { message: "Batas stok harus angka positif." }),
 });
 
 export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarcodeSetter }: AddItemDialogProps) {
@@ -42,8 +44,10 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
     defaultValues: {
       barcode: "",
       name: "",
+      costPrice: 0,
       price: 0,
       stock: 0,
+      lowStockThreshold: 5,
     },
   });
 
@@ -58,7 +62,7 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
 
 
   function handleSubmit(values: z.infer<typeof formSchema>) {
-    onSave(values.barcode, values.name, values.price, values.stock);
+    onSave(values);
     toast({
         title: "Barang Baru Ditambahkan",
         description: `${values.name} telah berhasil ditambahkan ke dalam stok.`,
@@ -72,8 +76,10 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
       form.reset({
         barcode: "",
         name: "",
+        costPrice: 0,
         price: 0,
         stock: 0,
+        lowStockThreshold: 5,
       });
     }
   }, [isOpen, form]);
@@ -119,32 +125,62 @@ export function AddItemDialog({ isOpen, onClose, onSave, onOpenScanner, setBarco
                         </FormItem>
                     )}
                 />
-                <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Harga Satuan (IDR)</FormLabel>
-                            <FormControl>
-                                <Input type="number" min="0" placeholder="cth: 22000" {...field} />
-                            </FormControl>
-                             <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="stock"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Stok Awal</FormLabel>
-                            <FormControl>
-                                <Input type="number" min="0" placeholder="cth: 100" {...field} />
-                            </FormControl>
-                             <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="costPrice"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Harga Awal (Modal)</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" placeholder="cth: 15000" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Harga Jual</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" placeholder="cth: 22000" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="stock"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Stok Awal</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" placeholder="cth: 100" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="lowStockThreshold"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Batas Stok Rendah</FormLabel>
+                                <FormControl>
+                                    <Input type="number" min="0" placeholder="cth: 10" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                 </div>
                 <DialogFooter className="pt-4">
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>
