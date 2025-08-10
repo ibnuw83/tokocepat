@@ -5,7 +5,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut } from "lucide-react";
+import { PlusCircle, Trash2, Printer, X, FileText, Sparkles, ShoppingCart, LogOut, ScanBarcode } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import type { Item } from "@/lib/types";
@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AiSuggestions } from "@/components/AiSuggestions";
 import { ReceiptDialog } from "@/components/ReceiptDialog";
 import { AdminLayout } from "@/components/AdminLayout";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 
 const itemSchema = z.object({
   name: z.string().min(1, "Nama barang tidak boleh kosong"),
@@ -32,9 +33,19 @@ export default function PosPage() {
   const [discount, setDiscount] = React.useState(0);
   const [discountType, setDiscountType] = React.useState<"percentage" | "fixed">("fixed");
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
+  const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
+
+  const form = useForm<z.infer<typeof itemSchema>>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      name: "",
+      price: 0,
+      quantity: 1,
+    },
+  });
 
   React.useEffect(() => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -84,15 +95,6 @@ export default function PosPage() {
      }
   }, [discountType, isMounted]);
 
-
-  const form = useForm<z.infer<typeof itemSchema>>({
-    resolver: zodResolver(itemSchema),
-    defaultValues: {
-      name: "",
-      price: 0,
-      quantity: 1,
-    },
-  });
 
   const subtotal = React.useMemo(() => {
     return items.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -153,6 +155,17 @@ export default function PosPage() {
       title: "Transaksi Baru",
       description: "Keranjang telah dikosongkan.",
     });
+  }
+  
+  function handleBarcodeScanned(decodedText: string) {
+    // Assuming barcode is the item name for now
+    // In a real app, you'd likely fetch item details from a database using the barcode
+    form.setValue("name", decodedText);
+    toast({
+        title: "Barcode Terdeteksi",
+        description: `Kode: ${decodedText}. Silakan lengkapi detail barang.`,
+    });
+    setScannerOpen(false);
   }
 
   const formatCurrency = (amount: number) => {
@@ -246,7 +259,13 @@ export default function PosPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-headline flex items-center gap-3"><PlusCircle className="text-primary"/>Tambah Barang Baru</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="font-headline flex items-center gap-3"><PlusCircle className="text-primary"/>Tambah Barang Baru</CardTitle>
+                        <Button variant="outline" onClick={() => setScannerOpen(true)}>
+                            <ScanBarcode className="mr-2 h-4 w-4" />
+                            Scan Barcode
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                   <Form {...form}>
@@ -256,9 +275,9 @@ export default function PosPage() {
                         name="name"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel>Nama Barang</FormLabel>
+                            <FormLabel>Nama Barang / Kode</FormLabel>
                             <FormControl>
-                              <Input placeholder="cth: Kopi Susu" {...field} />
+                              <Input placeholder="cth: Kopi Susu atau 899..." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -360,6 +379,11 @@ export default function PosPage() {
         discountAmount={discountAmount}
         total={total}
         formatCurrency={formatCurrency}
+      />
+      <BarcodeScannerDialog
+        isOpen={isScannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanSuccess={handleBarcodeScanned}
       />
     </>
   );
