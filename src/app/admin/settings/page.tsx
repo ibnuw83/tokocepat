@@ -38,13 +38,48 @@ export default function SettingsPage() {
     const [storeName, setStoreName] = React.useState("Toko Cepat");
     const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
     const [logo, setLogo] = React.useState<string | null>(null);
-    const [categories, setCategories] = React.useState<Categories>(defaultCategories);
+    const [categories, setCategories] = React.useState<Categories>({});
     const [newCategory, setNewCategory] = React.useState("");
     const [newSubcategory, setNewSubcategory] = React.useState<{ [key: string]: string }>({});
 
     const router = useRouter();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    
+    // Function to save all settings
+    const saveSettings = React.useCallback((updatedSettings: {
+        name?: string,
+        address?: string,
+        logo?: string | null,
+        categories?: Categories
+    }) => {
+        try {
+            const currentName = updatedSettings.name ?? storeName;
+            const currentAddress = updatedSettings.address ?? storeAddress;
+            const currentLogo = updatedSettings.logo ?? logo;
+            const currentCategories = updatedSettings.categories ?? categories;
+
+            localStorage.setItem("storeName", currentName);
+            localStorage.setItem("storeAddress", currentAddress);
+            if (currentLogo) {
+                localStorage.setItem("storeLogo", currentLogo);
+            } else {
+                localStorage.removeItem("storeLogo");
+            }
+            localStorage.setItem("storeCategories", JSON.stringify(currentCategories));
+            
+            // Dispatch a storage event to notify other components like Sidebar
+            window.dispatchEvent(new Event('storage'));
+            
+        } catch (error) {
+            console.error("Failed to save settings to localStorage", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Menyimpan",
+                description: "Terjadi kesalahan saat menyimpan pengaturan.",
+            });
+        }
+    }, [storeName, storeAddress, logo, categories, toast]);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -64,11 +99,25 @@ export default function SettingsPage() {
             if (savedCategories) {
                 setCategories(JSON.parse(savedCategories));
             } else {
-                // If no categories are saved, save the default ones
+                // If no categories are saved, save the default ones and set state
+                 setCategories(defaultCategories);
                  localStorage.setItem("storeCategories", JSON.stringify(defaultCategories));
             }
         }
     }, [router]);
+
+     // --- Auto-saving useEffects ---
+    React.useEffect(() => {
+        if(isMounted) {
+            saveSettings({ name: storeName, address: storeAddress, logo: logo });
+        }
+    }, [storeName, storeAddress, logo, isMounted, saveSettings]);
+
+    React.useEffect(() => {
+        if (isMounted && Object.keys(categories).length > 0) {
+            saveSettings({ categories: categories });
+        }
+    }, [categories, isMounted, saveSettings]);
     
     if (!isMounted) {
         return (
@@ -90,32 +139,9 @@ export default function SettingsPage() {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setLogo(reader.result as string);
+                toast({ title: "Logo Diperbarui", description: "Logo toko telah berhasil diunggah." });
             };
             reader.readAsDataURL(file);
-        }
-    }
-
-    const handleSaveChanges = () => {
-        try {
-            localStorage.setItem("storeName", storeName);
-            localStorage.setItem("storeAddress", storeAddress);
-            if (logo) {
-                localStorage.setItem("storeLogo", logo);
-            }
-            localStorage.setItem("storeCategories", JSON.stringify(categories));
-             // Dispatch a storage event to notify other components like Sidebar
-            window.dispatchEvent(new Event('storage'));
-            toast({
-                title: "Pengaturan Disimpan",
-                description: "Perubahan pada informasi toko telah berhasil disimpan.",
-            });
-        } catch (error) {
-            console.error("Failed to save settings to localStorage", error);
-            toast({
-                variant: "destructive",
-                title: "Gagal Menyimpan",
-                description: "Terjadi kesalahan saat menyimpan pengaturan.",
-            });
         }
     }
 
@@ -169,10 +195,6 @@ export default function SettingsPage() {
                 }
                 const data = JSON.parse(text);
                 
-                // Clear existing local storage before restoring
-                // Be careful with this in a real app, maybe merge instead
-                // localStorage.clear();
-
                 for (const key in data) {
                     if (Object.prototype.hasOwnProperty.call(data, key)) {
                         localStorage.setItem(key, data[key]);
@@ -249,7 +271,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Pengaturan Toko</CardTitle>
-            <CardDescription>Atur informasi dasar dan tampilan untuk toko Anda.</CardDescription>
+            <CardDescription>Atur informasi dasar dan tampilan untuk toko Anda. Perubahan disimpan secara otomatis.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -281,15 +303,12 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Rekomendasi ukuran: 200x200px. Format: JPG, PNG.</p>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button onClick={handleSaveChanges}>Simpan Perubahan Toko</Button>
-          </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Manajemen Kategori</CardTitle>
-            <CardDescription>Kelola kategori dan subkategori barang untuk inventaris Anda.</CardDescription>
+            <CardDescription>Kelola kategori dan subkategori barang untuk inventaris Anda. Perubahan disimpan secara otomatis.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -373,9 +392,6 @@ export default function SettingsPage() {
             </Accordion>
 
           </CardContent>
-           <CardFooter>
-            <Button onClick={handleSaveChanges}>Simpan Perubahan Kategori</Button>
-          </CardFooter>
         </Card>
 
         <Card>
@@ -423,3 +439,5 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
+
+    
