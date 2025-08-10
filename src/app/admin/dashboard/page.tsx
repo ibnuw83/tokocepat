@@ -7,56 +7,56 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useRouter } from "next/navigation";
 import { DollarSign, TrendingUp, TrendingDown, Package, Users, BarChart } from "lucide-react";
 import Link from "next/link";
+import type { Transaction } from "@/lib/types";
+import type { InventoryItem } from "../inventory/page";
+import type { Customer } from "../customers/page";
 
-// Mock data for dashboard
-const dashboardStats = [
-  {
-    title: "Total Pemasukan",
-    value: "Rp 7.350.000",
-    description: "Bulan ini",
-    icon: TrendingUp,
-    href: "/admin/financials"
-  },
-  {
-    title: "Total Pengeluaran",
-    value: "Rp 800.000",
-    description: "Bulan ini",
-    icon: TrendingDown,
-    href: "/admin/financials"
-  },
-   {
-    title: "Laba Bersih",
-    value: "Rp 6.550.000",
-    description: "Bulan ini",
-    icon: DollarSign,
-    href: "/admin/financials"
-  },
-  {
-    title: "Jenis Barang",
-    value: "4 Varian",
-    description: "Total di inventaris",
-    icon: Package,
-    href: "/admin/inventory"
-  },
-  {
-    title: "Total Konsumen",
-    value: "3 Pelanggan",
-    description: "Pelanggan terdaftar",
-    icon: Users,
-    href: "/admin/customers"
-  },
-   {
-    title: "Total Transaksi",
-    value: "3 Transaksi",
-    description: "Tercatat hari ini",
-    icon: BarChart,
-    href: "/admin/reports"
-  },
-];
+type FinancialEntry = { id: string; date: string; description: string; amount: number };
 
 export default function AdminDashboardPage() {
     const [isMounted, setIsMounted] = React.useState(false);
+    const [stats, setStats] = React.useState({
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        itemVariants: 0,
+        totalCustomers: 0,
+        totalTransactions: 0,
+    });
     const router = useRouter();
+    
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+
+    const loadDashboardData = React.useCallback(() => {
+        const storedTransactions = localStorage.getItem("transactions");
+        const transactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+        
+        const storedInventory = localStorage.getItem("inventoryItems");
+        const inventory: InventoryItem[] = storedInventory ? JSON.parse(storedInventory) : [];
+        
+        const storedCustomers = localStorage.getItem("customers");
+        const customers: Customer[] = storedCustomers ? JSON.parse(storedCustomers) : [];
+        
+        // Note: Expenses are managed in financials page state, not localStorage yet.
+        // For now, we'll use a default or assume it's zero if not found.
+        const storedExpenses = localStorage.getItem("expenses");
+        const expenses: FinancialEntry[] = storedExpenses ? JSON.parse(storedExpenses) : [];
+
+        const totalRevenue = transactions.reduce((sum, t) => sum + t.total, 0);
+        const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+        const netProfit = totalRevenue - totalExpenses;
+        
+        setStats({
+            totalRevenue,
+            totalExpenses,
+            netProfit,
+            itemVariants: inventory.length,
+            totalCustomers: customers.length,
+            totalTransactions: transactions.length,
+        });
+    }, []);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -65,8 +65,15 @@ export default function AdminDashboardPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
+            loadDashboardData();
+
+            // Listen for storage changes to keep dashboard updated
+            window.addEventListener('storage', loadDashboardData);
+            return () => {
+                window.removeEventListener('storage', loadDashboardData);
+            };
         }
-    }, [router]);
+    }, [router, loadDashboardData]);
     
     if (!isMounted) {
         return (
@@ -81,6 +88,51 @@ export default function AdminDashboardPage() {
             </div>
         );
     }
+
+    const dashboardStats = [
+        {
+            title: "Total Pemasukan",
+            value: formatCurrency(stats.totalRevenue),
+            description: "Dari semua transaksi",
+            icon: TrendingUp,
+            href: "/admin/financials"
+        },
+        {
+            title: "Total Pengeluaran",
+            value: formatCurrency(stats.totalExpenses),
+            description: "Bahan baku & operasional",
+            icon: TrendingDown,
+            href: "/admin/financials"
+        },
+        {
+            title: "Laba Bersih",
+            value: formatCurrency(stats.netProfit),
+            description: "Pemasukan - Pengeluaran",
+            icon: DollarSign,
+            href: "/admin/financials"
+        },
+        {
+            title: "Jenis Barang",
+            value: `${stats.itemVariants} Varian`,
+            description: "Total di inventaris",
+            icon: Package,
+            href: "/admin/inventory"
+        },
+        {
+            title: "Total Konsumen",
+            value: `${stats.totalCustomers} Pelanggan`,
+            description: "Pelanggan terdaftar",
+            icon: Users,
+            href: "/admin/customers"
+        },
+        {
+            title: "Total Transaksi",
+            value: `${stats.totalTransactions} Transaksi`,
+            description: "Tercatat sepanjang waktu",
+            icon: BarChart,
+            href: "/admin/reports"
+        },
+    ];
     
   return (
     <AdminLayout>
