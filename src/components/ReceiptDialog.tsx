@@ -80,7 +80,7 @@ export function ReceiptDialog({
       .print-container {
         padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 11pt; /* Adjusted for 80mm */
+        font-size: 12pt; /* Adjusted for 80mm */
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -93,41 +93,50 @@ export function ReceiptDialog({
         margin: 0 auto 5px;
       }
       .print-header h1 {
-        font-size: 16pt;
+        font-size: 18pt;
         margin: 0;
       }
        .print-header p {
-        font-size: 10pt;
+        font-size: 11pt;
         margin: 0;
       }
       .print-item-list, .print-summary {
         margin-top: 8px;
         margin-bottom: 8px;
       }
-      .print-item .item-details {
+      .print-item-row {
         display: grid;
         grid-template-columns: 1fr auto;
-        gap-x: 10px;
+        gap-x: 16px; /* Increased gap */
       }
-      .print-item .item-name {
+      .print-item-row > div:first-child {
+        justify-self: start;
+        text-align: left;
+      }
+      .print-item-row > div:last-child,
+      .print-item-row > p:last-child {
+        justify-self: end;
+        text-align: right;
+        white-space: nowrap;
+      }
+      .item-name {
         word-break: break-word;
       }
-      .print-item .item-total-price {
-         text-align: right;
-      }
-      .print-item .item-qty-price {
+      .item-qty-price {
         font-size: 10pt;
-        grid-column: 1; /* Aligns to left under item name */
+        color: #555;
       }
       .print-summary-line {
          display: grid;
          grid-template-columns: 1fr auto;
-         gap-x: 10px;
+         gap-x: 16px; /* Increased gap */
       }
-      .print-summary-line .summary-label {
+      .print-summary-line > p:first-child {
+        justify-self: start;
         text-align: left;
       }
-      .print-summary-line .summary-value {
+       .print-summary-line > p:last-child {
+        justify-self: end;
         text-align: right;
         white-space: nowrap;
       }
@@ -137,7 +146,7 @@ export function ReceiptDialog({
       }
       .print-total {
         font-weight: bold;
-        font-size: 13pt;
+        font-size: 14pt;
       }
       .print-footer {
           white-space: pre-wrap;
@@ -195,42 +204,44 @@ export function ReceiptDialog({
             <Separator className="my-4 print-separator" />
             <div className="my-4 space-y-3 print-item-list">
             {items.map(item => (
-                <div key={item.id} className="text-sm print-item">
-                    <div className="item-details">
-                        <p className="font-medium item-name">{item.name}</p>
-                        <p className="font-medium item-total-price">{formatCurrency(item.quantity * item.price)}</p>
+                <div key={item.id} className="text-sm">
+                    <div className="print-item-row">
+                        <div className="font-medium item-name">{item.name}</div>
+                        <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
                     </div>
-                    <p className="text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</p>
+                    <div className="print-item-row">
+                      <div className="text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</div>
+                    </div>
                 </div>
             ))}
             </div>
             <Separator className="my-4 print-separator"/>
             <div className="my-4 space-y-2 print-summary">
                 <div className="print-summary-line text-sm">
-                    <p className="summary-label">Subtotal</p>
-                    <p className="summary-value">{formatCurrency(subtotal)}</p>
+                    <p>Subtotal</p>
+                    <p>{formatCurrency(subtotal)}</p>
                 </div>
                 <div className="print-summary-line text-sm">
-                    <p className="summary-label">Diskon</p>
-                    <p className="summary-value">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : formatCurrency(0)}</p>
+                    <p>Diskon</p>
+                    <p>{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : formatCurrency(0)}</p>
                 </div>
                 <div className="print-summary-line font-bold text-base print-total">
-                    <p className="summary-label">Total</p>
-                    <p className="summary-value">{formatCurrency(total)}</p>
+                    <p>Total</p>
+                    <p>{formatCurrency(total)}</p>
                 </div>
                 <Separator className="my-2 print-separator"/>
                 <div className="print-summary-line text-sm">
-                    <p className="summary-label">Pembayaran ({paymentMethod})</p>
-                    <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
+                    <p>Pembayaran ({paymentMethod})</p>
+                    <p>{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
                 </div>
                 <div className="print-summary-line text-sm">
-                    <p className="summary-label">Kembalian</p>
-                    <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
+                    <p>Kembalian</p>
+                    <p>{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
                 </div>
                 {paymentMethod !== 'Tunai' && paymentRef && (
                     <div className="print-summary-line text-sm">
-                        <p className="summary-label">No. Ref</p>
-                        <p className="summary-value">{paymentRef}</p>
+                        <p>No. Ref</p>
+                        <p>{paymentRef}</p>
                     </div>
                 )}
             </div>
