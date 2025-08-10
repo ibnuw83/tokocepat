@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowUp, ArrowDown, TriangleAlert } from "lucide-react";
+import { PlusCircle, ArrowUp, ArrowDown, TriangleAlert, MoreHorizontal } from "lucide-react";
 import { StockAdjustmentDialog } from "@/components/StockAdjustmentDialog";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EditItemDialog } from "@/components/EditItemDialog";
 
 // Mock data for inventory
 const initialInventoryItems = [
@@ -29,6 +31,8 @@ export default function InventoryPage() {
     const [isAdjustmentDialogOpen, setAdjustmentDialogOpen] = React.useState(false);
     const [isAddItemDialogOpen, setAddItemDialogOpen] = React.useState(false);
     const [isScannerOpen, setScannerOpen] = React.useState(false);
+    const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+    const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
     const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
     const { toast } = useToast();
@@ -88,6 +92,19 @@ export default function InventoryPage() {
         };
         setInventoryItems(prev => [...prev, newItem]);
     };
+    
+    const handleEditItem = (item: InventoryItem) => {
+        setEditingItem(item);
+        setEditDialogOpen(true);
+    };
+
+    const handleUpdateItem = (updatedItem: InventoryItem) => {
+        setInventoryItems(prevItems => 
+            prevItems.map(item => item.id === updatedItem.id ? updatedItem : item)
+        );
+        setEditingItem(null);
+    };
+
 
     function handleBarcodeScanned(decodedText: string) {
         toast({
@@ -135,7 +152,8 @@ export default function InventoryPage() {
                         <TableHead>Kode Barcode</TableHead>
                         <TableHead>Harga Pokok</TableHead>
                         <TableHead>Harga Jual</TableHead>
-                        <TableHead className="text-right">Jumlah Stok</TableHead>
+                        <TableHead className="text-center">Jumlah Stok</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -145,8 +163,8 @@ export default function InventoryPage() {
                             <TableCell>{item.barcode}</TableCell>
                             <TableCell>{formatCurrency(item.costPrice)}</TableCell>
                             <TableCell>{formatCurrency(item.price)}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                                <div className="flex items-center justify-end gap-2">
+                            <TableCell className="text-center font-semibold">
+                                <div className="flex items-center justify-center gap-2">
                                      {item.stock <= item.lowStockThreshold && (
                                         <TooltipProvider>
                                             <Tooltip>
@@ -161,6 +179,21 @@ export default function InventoryPage() {
                                     )}
                                     <span>{item.stock}</span>
                                 </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Buka menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleEditItem(item)}>
+                                            Edit
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                         ))}
@@ -185,6 +218,17 @@ export default function InventoryPage() {
             onOpenScanner={() => setScannerOpen(true)}
             setBarcodeSetter={(setter) => { setBarcodeInDialogRef.current = setter; }}
         />
+        {editingItem && (
+            <EditItemDialog
+                isOpen={isEditDialogOpen}
+                onClose={() => {
+                    setEditDialogOpen(false);
+                    setEditingItem(null);
+                }}
+                item={editingItem}
+                onSave={handleUpdateItem}
+            />
+        )}
         <BarcodeScannerDialog
             isOpen={isScannerOpen}
             onClose={() => setScannerOpen(false)}
