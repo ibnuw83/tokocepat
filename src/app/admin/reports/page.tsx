@@ -17,6 +17,7 @@ import { id } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Separator } from "@/components/ui/separator";
 
 // Extend the window interface for autoTable
 declare module 'jspdf' {
@@ -166,54 +167,54 @@ export default function ReportsPage() {
       <div className="p-4 md:p-8">
         <Card>
           <CardHeader>
-            <div className="flex items-start md:items-center justify-between flex-col md:flex-row gap-4">
+            <div className="flex items-center justify-between">
                 <div>
                     <CardTitle>Laporan Transaksi</CardTitle>
                     <CardDescription>Lihat riwayat semua transaksi yang telah terjadi.</CardDescription>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                            variant={"outline"}
-                            className="w-full sm:w-[240px] justify-start text-left font-normal"
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <Select value={selectedOperator || ALL_CASHIERS_VALUE} onValueChange={handleOperatorChange}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Semua Kasir" />
-                        </SelectTrigger>
-                        <SelectContent>
-                             <SelectItem value={ALL_CASHIERS_VALUE}>Semua Kasir</SelectItem>
-                            {uniqueOperators.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    {(selectedDate || selectedOperator) && (
-                         <Button variant="ghost" onClick={resetFilters} size="icon">
-                            <X className="h-4 w-4" />
-                            <span className="sr-only">Reset Filter</span>
-                        </Button>
-                    )}
-                    <Button variant="outline" onClick={handleDownload} disabled={transactions.length === 0} className="w-full sm:w-auto">
-                        <Download className="mr-2 h-4 w-4" />
-                        Unduh PDF
-                    </Button>
-                </div>
+                 <Button variant="outline" onClick={handleDownload} disabled={transactions.length === 0} className="w-full sm:w-auto">
+                    <Download className="mr-2 h-4 w-4" />
+                    Unduh PDF
+                </Button>
             </div>
           </CardHeader>
           <CardContent>
+             <div className="flex flex-col sm:flex-row items-center gap-2 pb-6">
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className="w-full sm:w-[240px] justify-start text-left font-normal"
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+                <Select value={selectedOperator || ALL_CASHIERS_VALUE} onValueChange={handleOperatorChange}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Semua Kasir" />
+                    </SelectTrigger>
+                    <SelectContent>
+                            <SelectItem value={ALL_CASHIERS_VALUE}>Semua Kasir</SelectItem>
+                        {uniqueOperators.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                {(selectedDate || selectedOperator) && (
+                        <Button variant="ghost" onClick={resetFilters} size="icon">
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Reset Filter</span>
+                    </Button>
+                )}
+            </div>
              <Table>
                 <TableHeader>
                     <TableRow>
