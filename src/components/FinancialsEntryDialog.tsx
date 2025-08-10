@@ -122,5 +122,3 @@ export function FinancialsEntryDialog({ isOpen, onClose, type, onSave, existingD
     </Dialog>
   );
 }
-
-    

@@ -260,7 +260,7 @@ export default function FinancialsPage() {
                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleOpenEditDialog(cap, 'capital')}>Edit</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleOpenDeleteAlert(cap, 'capital')} className="text-destructive">Hapus</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenDeleteAlert(cap, 'capital')} className="text-destructive focus:text-destructive">Hapus</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>
@@ -299,7 +299,7 @@ export default function FinancialsPage() {
                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleOpenEditDialog(exp, 'expense')}>Edit</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleOpenDeleteAlert(exp, 'expense')} className="text-destructive">Hapus</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenDeleteAlert(exp, 'expense')} className="text-destructive focus:text-destructive">Hapus</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>
@@ -314,7 +314,10 @@ export default function FinancialsPage() {
     </AdminLayout>
     <FinancialsEntryDialog
         isOpen={isDialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => {
+            setDialogOpen(false);
+            setEntryToEdit(null);
+        }}
         type={dialogType}
         onSave={handleSaveEntry}
         existingData={entryToEdit?.entry}
@@ -331,12 +334,10 @@ export default function FinancialsPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => setEntryToDelete(null)}>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleConfirmDelete}>Ya, Hapus</AlertDialogAction>
+                <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">Ya, Hapus</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
     </>
   );
 }
-
-    
