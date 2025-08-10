@@ -52,6 +52,7 @@ export function ReceiptDialog({
   const [storeAddress, setStoreAddress] = React.useState("");
   const [logo, setLogo] = React.useState<string | null>(null);
   const [receiptFooter, setReceiptFooter] = React.useState("Terima kasih telah berbelanja!");
+  const [paperSize, setPaperSize] = React.useState("80mm");
 
   React.useEffect(() => {
     if (isOpen) {
@@ -59,83 +60,88 @@ export function ReceiptDialog({
       const savedAddress = localStorage.getItem("storeAddress");
       const savedLogo = localStorage.getItem("storeLogo");
       const savedFooter = localStorage.getItem("receiptFooter");
+      const savedPaperSize = localStorage.getItem("receiptPaperSize");
 
       if (savedName) setStoreName(savedName);
       if (savedAddress) setStoreAddress(savedAddress);
       if (savedLogo) setLogo(savedLogo);
       if (savedFooter) setReceiptFooter(savedFooter);
+      if (savedPaperSize) setPaperSize(savedPaperSize);
     }
   }, [isOpen]);
 
-  const printStyles = `
-    @media print {
-      @page {
-        margin: 0;
-        size: 80mm auto;
+  const getPrintStyles = (size: string) => {
+    const is80mm = size === '80mm';
+    return `
+      @media print {
+        @page {
+          margin: 0;
+          size: ${size} auto;
+        }
+        body {
+          margin: 0;
+          background: #fff;
+        }
+        .print-container {
+          padding: 10px;
+          font-family: 'Courier New', monospace;
+          color: #000;
+          width: 100%;
+          line-height: 1.4;
+          font-size: ${is80mm ? '12pt' : '10pt'};
+        }
+        .print-header, .print-footer {
+          text-align: center;
+        }
+        .print-header img {
+          max-width: 40%;
+          margin: 0 auto 5px;
+        }
+        .print-header h1 {
+          font-size: ${is80mm ? '18pt' : '14pt'};
+          margin: 0;
+        }
+         .print-header p {
+          font-size: ${is80mm ? '11pt' : '9pt'};
+          margin: 0;
+        }
+        .print-item-list, .print-summary {
+          margin-top: 8px;
+          margin-bottom: 8px;
+        }
+        .print-row {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: ${is80mm ? '12px' : '8px'};
+        }
+        .print-row .left {
+          text-align: left;
+          word-break: break-word;
+        }
+        .print-row .right {
+          text-align: right;
+          white-space: nowrap;
+        }
+        .item-qty-price {
+          font-size: ${is80mm ? '10pt' : '8pt'};
+          color: #555;
+        }
+        .print-separator {
+          border-top: 1px dashed #000;
+          margin: 8px 0;
+        }
+        .print-total .right {
+          font-weight: bold;
+          font-size: ${is80mm ? '14pt' : '12pt'};
+        }
+        .print-footer {
+            white-space: pre-wrap;
+            font-size: ${is80mm ? '10pt' : '8pt'};
+        }
       }
-      body {
-        margin: 0;
-        background: #fff;
-      }
-      .print-container {
-        padding: 10px;
-        font-family: 'Courier New', monospace;
-        font-size: 12pt;
-        color: #000;
-        width: 100%;
-        line-height: 1.4;
-      }
-      .print-header, .print-footer {
-        text-align: center;
-      }
-      .print-header img {
-        max-width: 40%;
-        margin: 0 auto 5px;
-      }
-      .print-header h1 {
-        font-size: 18pt;
-        margin: 0;
-      }
-       .print-header p {
-        font-size: 11pt;
-        margin: 0;
-      }
-      .print-item-list, .print-summary {
-        margin-top: 8px;
-        margin-bottom: 8px;
-      }
-      .print-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 12px;
-      }
-      .print-row .left {
-        text-align: left;
-        word-break: break-word;
-      }
-      .print-row .right {
-        text-align: right;
-        white-space: nowrap;
-      }
-      .item-qty-price {
-        font-size: 10pt;
-        color: #555;
-      }
-      .print-separator {
-        border-top: 1px dashed #000;
-        margin: 8px 0;
-      }
-      .print-total .right {
-        font-weight: bold;
-        font-size: 14pt;
-      }
-      .print-footer {
-          white-space: pre-wrap;
-          font-size: 10pt;
-      }
-    }
-  `;
-  
+    `;
+  };
+
   const handlePrint = () => {
     const printContent = document.getElementById('receipt-content');
     if (printContent) {
@@ -146,7 +152,7 @@ export function ReceiptDialog({
           <html>
             <head>
               <title>Cetak Struk</title>
-              <style>${printStyles}</style>
+              <style>${getPrintStyles(paperSize)}</style>
             </head>
             <body>
               <div class="print-container">${receiptHtml}</div>
@@ -179,9 +185,11 @@ export function ReceiptDialog({
               </p>
           </div>
           <Separator className="my-4 print-separator" />
-          <div className="text-sm print-row">
+          <div className="text-sm">
+            <div className="print-row">
               <span className="left">Pelanggan</span>
               <span className="right font-semibold">{customerName}</span>
+            </div>
           </div>
           <Separator className="my-4 print-separator" />
           <div className="my-4 space-y-3 print-item-list">

@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export type Categories = Record<string, string[]>;
 
@@ -36,6 +37,7 @@ export default function SettingsPage() {
     const [storeName, setStoreName] = React.useState("Toko Cepat");
     const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
     const [receiptFooter, setReceiptFooter] = React.useState("Terima kasih telah berbelanja!");
+    const [receiptPaperSize, setReceiptPaperSize] = React.useState("80mm");
     const [logo, setLogo] = React.useState<string | null>(null);
     const [categories, setCategories] = React.useState<Categories>({});
     const [newCategory, setNewCategory] = React.useState("");
@@ -51,11 +53,13 @@ export default function SettingsPage() {
         const savedLogo = localStorage.getItem("storeLogo");
         const savedCategories = localStorage.getItem("storeCategories");
         const savedFooter = localStorage.getItem("receiptFooter");
+        const savedPaperSize = localStorage.getItem("receiptPaperSize");
         
         if (savedName) setStoreName(savedName);
         if (savedAddress) setStoreAddress(savedAddress);
         if (savedLogo) setLogo(savedLogo);
         if (savedFooter) setReceiptFooter(savedFooter);
+        if (savedPaperSize) setReceiptPaperSize(savedPaperSize);
 
         if (savedCategories) {
             setCategories(JSON.parse(savedCategories));
@@ -95,6 +99,11 @@ export default function SettingsPage() {
         setReceiptFooter(e.target.value);
         localStorage.setItem("receiptFooter", e.target.value);
     };
+    
+    const handlePaperSizeChange = (value: string) => {
+        setReceiptPaperSize(value);
+        localStorage.setItem("receiptPaperSize", value);
+    }
 
     const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
@@ -207,6 +216,19 @@ export default function SettingsPage() {
             <div className="space-y-2">
                 <Label htmlFor="receipt-footer">Teks Catatan Kaki Struk</Label>
                 <Textarea id="receipt-footer" value={receiptFooter} onChange={handleReceiptFooterChange} placeholder="cth: Terima kasih telah berbelanja! Barang yang sudah dibeli tidak dapat dikembalikan." />
+            </div>
+             <div className="space-y-2">
+                <Label>Ukuran Kertas Struk</Label>
+                <RadioGroup value={receiptPaperSize} onValueChange={handlePaperSizeChange} className="flex gap-4 pt-1">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="80mm" id="size-80mm" />
+                        <Label htmlFor="size-80mm">80mm (Standar Minimarket)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="58mm" id="size-58mm" />
+                        <Label htmlFor="size-58mm">58mm (Kecil/Portable)</Label>
+                    </div>
+                </RadioGroup>
             </div>
           </CardContent>
         </Card>
