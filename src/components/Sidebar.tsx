@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings, LayoutDashboard } from "lucide-react";
+import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings, LayoutDashboard, UserCog } from "lucide-react";
 import Image from "next/image";
 
 const allMenuItems = [
@@ -15,6 +15,7 @@ const allMenuItems = [
   { href: "/admin/financials", icon: BookCopy, label: "Laporan Keuangan" },
   { href: "/admin/reports", icon: FileText, label: "Laporan Transaksi" },
   { href: "/admin/customers", icon: Users, label: "Data Konsumen" },
+  { href: "/admin/users", icon: UserCog, label: "Manajemen Pengguna" },
   { href: "/admin/settings", icon: Settings, label: "Pengaturan Toko" },
 ];
 

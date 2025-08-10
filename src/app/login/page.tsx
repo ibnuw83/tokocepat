@@ -21,18 +21,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import type { User } from "@/lib/types";
+import { initialUsers } from "@/lib/users";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username tidak boleh kosong"),
   password: z.string().min(1, "Password tidak boleh kosong"),
 });
-
-// Mock user data that would typically come from a database
-const validUsers = [
-  { username: "admin", password: "admin", role: "Administrator" },
-  { username: "kasir01", password: "kasir01", role: "Kasir" },
-  { username: "kasir02", password: "kasir02", role: "Kasir" },
-];
 
 
 export default function LoginPage() {
@@ -41,6 +36,7 @@ export default function LoginPage() {
   const [isMounted, setIsMounted] = React.useState(false);
   const [storeName, setStoreName] = React.useState("Toko Cepat");
   const [logo, setLogo] = React.useState<string | null>(null);
+  const [users, setUsers] = React.useState<User[]>([]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -54,6 +50,15 @@ export default function LoginPage() {
     if (savedName) setStoreName(savedName);
     if (savedLogo) setLogo(savedLogo);
 
+    // Load users from storage or set initial ones
+    const savedUsers = localStorage.getItem("app-users");
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
+    } else {
+      setUsers(initialUsers);
+      localStorage.setItem("app-users", JSON.stringify(initialUsers));
+    }
+
   }, [router]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -65,7 +70,7 @@ export default function LoginPage() {
   });
 
   function onSubmit(data: z.infer<typeof loginSchema>) {
-    const user = validUsers.find(
+    const user = users.find(
         (u) => u.username === data.username && u.password === data.password
     );
 

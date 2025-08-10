@@ -1,4 +1,5 @@
 
+
 export interface Item {
   id: string;
   name: string;
@@ -16,4 +17,11 @@ export interface Transaction {
   customerId?: string;
   customerName?: string;
   details: Item[];
+}
+
+export interface User {
+  id: string;
+  username: string;
+  password: string;
+  role: 'Administrator' | 'Kasir';
 }
