@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, ArrowUp, ArrowDown, TriangleAlert, MoreHorizontal } from "lucide-react";
+import { PlusCircle, ArrowUp, ArrowDown, TriangleAlert, MoreHorizontal, Search } from "lucide-react";
 import { StockAdjustmentDialog } from "@/components/StockAdjustmentDialog";
 import { AddItemDialog } from "@/components/AddItemDialog";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { EditItemDialog } from "@/components/EditItemDialog";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,7 @@ export default function InventoryPage() {
     const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
     const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
+    const [searchTerm, setSearchTerm] = React.useState("");
     const { toast } = useToast();
     const router = useRouter();
 
@@ -76,6 +78,10 @@ export default function InventoryPage() {
             </div>
         );
     }
+
+    const filteredItems = inventoryItems.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
@@ -154,12 +160,12 @@ export default function InventoryPage() {
         <div className="p-4 md:p-8">
             <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-4">
                     <div>
                         <CardTitle>Manajemen Stok</CardTitle>
                         <CardDescription>Lihat dan kelola stok barang di toko Anda.</CardDescription>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0">
                         <Button variant="outline" onClick={() => handleOpenAdjustmentDialog('in')}>
                             <ArrowUp className="mr-2 h-4 w-4" />
                             Barang Masuk
@@ -172,6 +178,17 @@ export default function InventoryPage() {
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Tambah Barang Baru
                         </Button>
+                    </div>
+                </div>
+                 <div className="pt-6">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Cari nama barang..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="max-w-sm pl-9"
+                        />
                     </div>
                 </div>
             </CardHeader>
@@ -188,7 +205,7 @@ export default function InventoryPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {inventoryItems.map((item) => (
+                        {filteredItems.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.barcode}</TableCell>
@@ -236,7 +253,7 @@ export default function InventoryPage() {
                         </TableRow>
                         ))}
                     </TableBody>
-                    <TableCaption>Total {inventoryItems.length} jenis barang.</TableCaption>
+                    <TableCaption>Total {filteredItems.length} dari {inventoryItems.length} jenis barang ditemukan.</TableCaption>
                 </Table>
             </CardContent>
             </Card>
