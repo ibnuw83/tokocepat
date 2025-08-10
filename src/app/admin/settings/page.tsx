@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Download, UploadCloud, PlusCircle, Trash2 } from "lucide-react";
+import { Upload, Download, UploadCloud, PlusCircle, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -354,5 +354,3 @@ export default function SettingsPage() {
     </AdminLayout>
   );
 }
-
-    
