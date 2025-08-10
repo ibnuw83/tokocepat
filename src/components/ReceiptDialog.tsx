@@ -27,6 +27,7 @@ interface ReceiptDialogProps {
   onConfirm: () => void;
   customerName: string;
   paymentMethod: PaymentMethod;
+  paymentRef?: string;
 }
 
 export function ReceiptDialog({ 
@@ -41,7 +42,8 @@ export function ReceiptDialog({
   formatCurrency, 
   onConfirm, 
   customerName,
-  paymentMethod
+  paymentMethod,
+  paymentRef
 }: ReceiptDialogProps) {
   
   // CSS for thermal printer styling
@@ -164,6 +166,12 @@ export function ReceiptDialog({
                 <p>Kembalian</p>
                 <p>{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
             </div>
+            {paymentMethod !== 'Tunai' && paymentRef && (
+                <div className="flex justify-between text-sm">
+                    <p>No. Referensi</p>
+                    <p>{paymentRef}</p>
+                </div>
+            )}
             </div>
             <Separator className="my-4 print-separator"/>
             <p className="text-center text-xs text-muted-foreground pt-4 print-footer">

@@ -20,6 +20,7 @@ export interface Transaction {
   customerName?: string;
   details: Item[];
   paymentMethod: PaymentMethod;
+  paymentRef?: string;
 }
 
 export interface User {

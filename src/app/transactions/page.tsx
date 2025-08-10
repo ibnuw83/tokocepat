@@ -42,6 +42,7 @@ export default function PosPage() {
   const [discountType, setDiscountType] = React.useState<"percentage" | "fixed">("fixed");
   const [paymentAmount, setPaymentAmount] = React.useState(0);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('Tunai');
+  const [paymentRef, setPaymentRef] = React.useState("");
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
   const [isScannerOpen, setScannerOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
@@ -136,6 +137,7 @@ export default function PosPage() {
   React.useEffect(() => {
     if (paymentMethod !== 'Tunai') {
         setPaymentAmount(total);
+        setPaymentRef("");
     }
   }, [paymentMethod, total]);
 
@@ -240,6 +242,7 @@ export default function PosPage() {
     setPaymentAmount(0);
     setPaymentMethod('Tunai');
     setSelectedCustomer(null);
+    setPaymentRef("");
     form.reset({ id: "", name: "", price: 0, quantity: 1 });
     localStorage.removeItem("pos-items");
     localStorage.removeItem("pos-discount");
@@ -265,6 +268,7 @@ export default function PosPage() {
       customerName: selectedCustomer?.name || "Pelanggan Umum",
       details: items,
       paymentMethod: paymentMethod,
+      paymentRef: paymentMethod !== 'Tunai' ? paymentRef : undefined,
     };
     
     transactions.push(newTransaction);
@@ -575,7 +579,7 @@ export default function PosPage() {
                       </RadioGroup>
                     </div>
 
-                    {paymentMethod === 'Tunai' && (
+                    {paymentMethod === 'Tunai' ? (
                         <div className="space-y-2">
                           <Label htmlFor="payment-amount">Jumlah Bayar</Label>
                           <Input
@@ -593,6 +597,18 @@ export default function PosPage() {
                                 </Button>
                               ))}
                           </div>
+                        </div>
+                    ) : (
+                       <div className="space-y-2">
+                          <Label htmlFor="payment-ref">No. Referensi/Kartu</Label>
+                          <Input
+                            id="payment-ref"
+                            type="text"
+                            placeholder="Opsional, masukkan no. referensi"
+                            value={paymentRef}
+                            onChange={(e) => setPaymentRef(e.target.value)}
+                            disabled={isPaymentDisabled}
+                          />
                         </div>
                     )}
                     
@@ -625,6 +641,7 @@ export default function PosPage() {
         formatCurrency={formatCurrency}
         onConfirm={finalizeTransaction}
         paymentMethod={paymentMethod}
+        paymentRef={paymentRef}
       />
       <BarcodeScannerDialog
         isOpen={isScannerOpen}
