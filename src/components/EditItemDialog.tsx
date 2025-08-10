@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from '@/hooks/use-toast';
 import type { InventoryItem } from '@/app/admin/inventory/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import type { Categories } from '@/app/admin/settings/page';
 
 interface EditItemDialogProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const formSchema = z.object({
   barcode: z.string().min(1, { message: "Kode barang tidak boleh kosong." }),
   name: z.string().min(1, { message: "Nama barang tidak boleh kosong." }),
   category: z.string().min(1, { message: "Kategori harus dipilih." }),
+  subcategory: z.string().min(1, { message: "Subkategori harus dipilih." }),
   costPrice: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   price: z.coerce.number().min(0, { message: "Harga harus angka positif." }),
   stock: z.coerce.number().min(0, { message: "Stok harus angka positif." }),
@@ -40,11 +42,14 @@ const formSchema = z.object({
 
 export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialogProps) {
   const { toast } = useToast();
-  const [categories, setCategories] = React.useState<string[]>([]);
+  const [categories, setCategories] = React.useState<Categories>({});
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: item,
   });
+
+  const selectedCategory = form.watch("category");
 
   // Load categories from localStorage when the dialog is open
   React.useEffect(() => {
@@ -62,6 +67,14 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
     }
   }, [item, form]);
 
+  // Reset subcategory when category changes, if the old subcategory is not in the new list
+  React.useEffect(() => {
+    if (selectedCategory && item.category !== selectedCategory) {
+        form.setValue("subcategory", "");
+    }
+  }, [selectedCategory, item.category, form]);
+
+
   function handleSubmit(values: z.infer<typeof formSchema>) {
     onSave({ ...item, ...values });
     toast({
@@ -73,7 +86,7 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit Data Barang</DialogTitle>
           <DialogDescription>Perbarui detail untuk barang yang sudah ada di inventaris.</DialogDescription>
@@ -93,20 +106,20 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
                         </FormItem>
                     )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Nama Barang</FormLabel>
+                            <FormControl>
+                                <Input placeholder="cth: Kopi Americano" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nama Barang</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="cth: Kopi Americano" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
                      <FormField
                         control={form.control}
                         name="category"
@@ -120,8 +133,30 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {categories.map(cat => (
+                                        {Object.keys(categories).map(cat => (
                                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="subcategory"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Subkategori</FormLabel>
+                                 <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCategory}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih subkategori" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {selectedCategory && categories[selectedCategory]?.map(subcat => (
+                                          <SelectItem key={subcat} value={subcat}>{subcat}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -198,5 +233,3 @@ export function EditItemDialog({ isOpen, onClose, item, onSave }: EditItemDialog
     </Dialog>
   );
 }
-
-    

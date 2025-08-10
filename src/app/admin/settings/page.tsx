@@ -14,70 +14,23 @@ import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
-const defaultCategories = [
-    "Fashion",
-    "Elektronik",
-    "Kecantikan & Perawatan",
-    "Rumah & Dekorasi",
-    "Olahraga & Outdoor",
-    "Anak & Bayi",
-    "Makanan & Minuman",
-    "Buku & Stationery",
-    "Otomotif",
-    "Hobi & Koleksi",
-    "Pakaian Pria",
-    "Pakaian Wanita",
-    "Sepatu",
-    "Aksesoris",
-    "Perhiasan",
-    "Smartphone & Aksesoris",
-    "Laptop & Komputer",
-    "Kamera",
-    "Audio & Speaker",
-    "Peralatan Rumah Tangga Elektronik",
-    "Makeup",
-    "Perawatan Kulit",
-    "Parfum",
-    "Perawatan Rambut",
-    "Produk Kesehatan",
-    "Perabotan Rumah",
-    "Dekorasi Interior",
-    "Peralatan Dapur",
-    "Lampu & Pencahayaan",
-    "Tanaman Hias",
-    "Pakaian & Sepatu Olahraga",
-    "Alat Fitness",
-    "Peralatan Camping",
-    "Sepeda & Aksesoris",
-    "Produk Hiking",
-    "Pakaian Anak",
-    "Mainan",
-    "Perlengkapan Bayi",
-    "Buku Anak",
-    "Makanan & Susu Bayi",
-    "Makanan Ringan",
-    "Minuman Kemasan",
-    "Bahan Masakan",
-    "Produk Organik",
-    "Kue & Roti",
-    "Buku Fiksi & Nonfiksi",
-    "Buku Pelajaran",
-    "Alat Tulis",
-    "Planner & Kalender",
-    "Aksesoris Kantor",
-    "Sparepart",
-    "Aksesoris Mobil & Motor",
-    "Helm & Perlengkapan Safety",
-    "Oli & Pelumas",
-    "Alat Perawatan Kendaraan",
-    "Alat Musik",
-    "Koleksi Action Figure",
-    "Alat Seni & Kerajinan",
-    "Produk Gaming",
-    "Kamera & Fotografi",
-];
+export type Categories = Record<string, string[]>;
+
+const defaultCategories: Categories = {
+    "Fashion": ["Pakaian Pria", "Pakaian Wanita", "Sepatu", "Aksesoris", "Perhiasan"],
+    "Elektronik": ["Smartphone & Aksesoris", "Laptop & Komputer", "Kamera", "Audio & Speaker", "Peralatan Rumah Tangga Elektronik"],
+    "Kecantikan & Perawatan": ["Makeup", "Perawatan Kulit", "Parfum", "Perawatan Rambut", "Produk Kesehatan"],
+    "Rumah & Dekorasi": ["Perabotan Rumah", "Dekorasi Interior", "Peralatan Dapur", "Lampu & Pencahayaan", "Tanaman Hias"],
+    "Olahraga & Outdoor": ["Pakaian & Sepatu Olahraga", "Alat Fitness", "Peralatan Camping", "Sepeda & Aksesoris", "Produk Hiking"],
+    "Anak & Bayi": ["Pakaian Anak", "Mainan", "Perlengkapan Bayi", "Buku Anak", "Makanan & Susu Bayi"],
+    "Makanan & Minuman": ["Makanan Ringan", "Minuman Kemasan", "Bahan Masakan", "Produk Organik", "Kue & Roti", "Kopi", "Teh"],
+    "Buku & Stationery": ["Buku Fiksi & Nonfiksi", "Buku Pelajaran", "Alat Tulis", "Planner & Kalender", "Aksesoris Kantor"],
+    "Otomotif": ["Sparepart", "Aksesoris Mobil & Motor", "Helm & Perlengkapan Safety", "Oli & Pelumas", "Alat Perawatan Kendaraan"],
+    "Hobi & Koleksi": ["Alat Musik", "Koleksi Action Figure", "Alat Seni & Kerajinan", "Produk Gaming", "Kamera & Fotografi"],
+};
 
 
 export default function SettingsPage() {
@@ -85,8 +38,9 @@ export default function SettingsPage() {
     const [storeName, setStoreName] = React.useState("Toko Cepat");
     const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
     const [logo, setLogo] = React.useState<string | null>(null);
-    const [categories, setCategories] = React.useState<string[]>(defaultCategories);
+    const [categories, setCategories] = React.useState<Categories>(defaultCategories);
     const [newCategory, setNewCategory] = React.useState("");
+    const [newSubcategory, setNewSubcategory] = React.useState<{ [key: string]: string }>({});
 
     const router = useRouter();
     const { toast } = useToast();
@@ -248,23 +202,44 @@ export default function SettingsPage() {
         reader.readAsText(file);
     }
 
-    const handleAddCategory = () => {
-        if (newCategory && !categories.includes(newCategory)) {
-            const updatedCategories = [...categories, newCategory];
+     const handleAddCategory = () => {
+        if (newCategory && !categories[newCategory]) {
+            const updatedCategories = { ...categories, [newCategory]: [] };
             setCategories(updatedCategories);
-            localStorage.setItem("storeCategories", JSON.stringify(updatedCategories));
             setNewCategory("");
-            toast({ title: "Kategori Ditambahkan", description: `"${newCategory}" telah ditambahkan.`});
-        } else if (categories.includes(newCategory)) {
-            toast({ variant: "destructive", title: "Gagal", description: "Kategori tersebut sudah ada."});
+            toast({ title: "Kategori Ditambahkan", description: `"${newCategory}" telah ditambahkan.` });
+        } else if (categories[newCategory]) {
+            toast({ variant: "destructive", title: "Gagal", description: "Kategori tersebut sudah ada." });
+        }
+    };
+
+    const handleAddSubcategory = (category: string) => {
+        const subcatValue = newSubcategory[category]?.trim();
+        if (subcatValue && !categories[category].includes(subcatValue)) {
+            const updatedCategories = {
+                ...categories,
+                [category]: [...categories[category], subcatValue]
+            };
+            setCategories(updatedCategories);
+            setNewSubcategory(prev => ({ ...prev, [category]: "" }));
+            toast({ title: "Subkategori Ditambahkan" });
         }
     };
 
     const handleDeleteCategory = (categoryToDelete: string) => {
-        const updatedCategories = categories.filter(cat => cat !== categoryToDelete);
+        const { [categoryToDelete]: _, ...remainingCategories } = categories;
+        setCategories(remainingCategories);
+        toast({ variant: "destructive", title: "Kategori Dihapus", description: `"${categoryToDelete}" telah dihapus.` });
+    };
+
+    const handleDeleteSubcategory = (category: string, subcategoryToDelete: string) => {
+        const updatedSubcategories = categories[category].filter(sc => sc !== subcategoryToDelete);
+        const updatedCategories = {
+            ...categories,
+            [category]: updatedSubcategories
+        };
         setCategories(updatedCategories);
-        localStorage.setItem("storeCategories", JSON.stringify(updatedCategories));
-        toast({ variant: "destructive", title: "Kategori Dihapus", description: `"${categoryToDelete}" telah dihapus.`});
+        toast({ variant: "destructive", title: "Subkategori Dihapus" });
     };
 
     
@@ -307,14 +282,14 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button onClick={handleSaveChanges}>Simpan Perubahan</Button>
+            <Button onClick={handleSaveChanges}>Simpan Perubahan Toko</Button>
           </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Manajemen Kategori</CardTitle>
-            <CardDescription>Kelola kategori barang untuk inventaris Anda.</CardDescription>
+            <CardDescription>Kelola kategori dan subkategori barang untuk inventaris Anda.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -328,43 +303,73 @@ export default function SettingsPage() {
                     />
                     <Button onClick={handleAddCategory}>
                         <PlusCircle className="mr-2 h-4 w-4"/>
-                        Tambah
+                        Tambah Kategori
                     </Button>
                 </div>
             </div>
-            <div>
-                <Label>Kategori Saat Ini</Label>
-                <div className="flex flex-wrap gap-2 mt-2 border rounded-md p-4 bg-muted/50 min-h-[80px] items-center">
-                    {categories.length > 0 ? categories.map(cat => (
-                       <Badge key={cat} variant="secondary" className="text-base py-1 px-3 flex items-center gap-2">
-                           {cat}
-                           <AlertDialog>
-                             <AlertDialogTrigger asChild>
-                               <button className="rounded-full hover:bg-destructive/20 text-destructive">
-                                   <X className="h-3 w-3" />
-                               </button>
-                             </AlertDialogTrigger>
-                             <AlertDialogContent>
-                               <AlertDialogHeader>
-                                 <AlertDialogTitle>Yakin Ingin Menghapus Kategori?</AlertDialogTitle>
-                                 <AlertDialogDescription>
-                                   Tindakan ini akan menghapus kategori "{cat}". Ini tidak akan mengubah kategori barang yang sudah ada.
-                                 </AlertDialogDescription>
-                               </AlertDialogHeader>
-                               <AlertDialogFooter>
-                                 <AlertDialogCancel>Batal</AlertDialogCancel>
-                                 <AlertDialogAction onClick={() => handleDeleteCategory(cat)}>
-                                   Ya, Hapus
-                                 </AlertDialogAction>
-                               </AlertDialogFooter>
-                             </AlertDialogContent>
-                           </AlertDialog>
-                       </Badge>
-                    )) : (
-                        <p className="text-sm text-muted-foreground">Belum ada kategori.</p>
-                    )}
-                </div>
-            </div>
+            
+            <Accordion type="multiple" className="w-full">
+                 {Object.entries(categories).map(([category, subcategories]) => (
+                    <AccordionItem value={category} key={category}>
+                        <AccordionTrigger className="flex justify-between items-center w-full hover:no-underline">
+                           <div className="flex items-center gap-2">
+                                <span className="font-semibold">{category}</span>
+                                <Badge variant="secondary">{subcategories.length} sub</Badge>
+                           </div>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-8 w-8">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Yakin Ingin Menghapus Kategori?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Tindakan ini akan menghapus kategori "{category}" beserta semua subkategorinya. Ini tidak akan mengubah kategori barang yang sudah ada.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteCategory(category)}>
+                                        Ya, Hapus
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           <div className="pl-4 space-y-3">
+                                <div className="space-y-2">
+                                    <Label htmlFor={`new-sub-${category}`}>Tambah Subkategori</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id={`new-sub-${category}`}
+                                            placeholder="Nama subkategori baru..."
+                                            value={newSubcategory[category] || ""}
+                                            onChange={(e) => setNewSubcategory(prev => ({ ...prev, [category]: e.target.value }))}
+                                        />
+                                        <Button size="sm" onClick={() => handleAddSubcategory(category)}>Tambah</Button>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-2">
+                                    {subcategories.length > 0 ? subcategories.map(sc => (
+                                         <Badge key={sc} variant="outline" className="text-sm py-1 px-2 flex items-center gap-2">
+                                            {sc}
+                                            <button 
+                                                className="rounded-full hover:bg-destructive/20 text-destructive"
+                                                onClick={() => handleDeleteSubcategory(category, sc)}>
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                         </Badge>
+                                    )) : <p className="text-xs text-muted-foreground">Belum ada subkategori.</p>}
+                                </div>
+                           </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                 ))}
+            </Accordion>
+
           </CardContent>
            <CardFooter>
             <Button onClick={handleSaveChanges}>Simpan Perubahan Kategori</Button>
