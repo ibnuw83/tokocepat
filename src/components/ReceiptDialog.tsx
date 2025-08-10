@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Item, PaymentMethod } from "@/lib/types";
 import { Separator } from "@/components/ui/separator";
-import { Printer, X, CheckCircle } from "lucide-react";
+import { Printer, CheckCircle } from "lucide-react";
+import Image from "next/image";
 
 interface ReceiptDialogProps {
   isOpen: boolean;
@@ -46,7 +48,25 @@ export function ReceiptDialog({
   paymentRef
 }: ReceiptDialogProps) {
   
-  // CSS for thermal printer styling
+  const [storeName, setStoreName] = React.useState("Toko Cepat");
+  const [storeAddress, setStoreAddress] = React.useState("");
+  const [logo, setLogo] = React.useState<string | null>(null);
+  const [receiptFooter, setReceiptFooter] = React.useState("Terima kasih telah berbelanja!");
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const savedName = localStorage.getItem("storeName");
+      const savedAddress = localStorage.getItem("storeAddress");
+      const savedLogo = localStorage.getItem("storeLogo");
+      const savedFooter = localStorage.getItem("receiptFooter");
+
+      if (savedName) setStoreName(savedName);
+      if (savedAddress) setStoreAddress(savedAddress);
+      if (savedLogo) setLogo(savedLogo);
+      if (savedFooter) setReceiptFooter(savedFooter);
+    }
+  }, [isOpen]);
+
   const printStyles = `
     @media print {
       @page {
@@ -63,9 +83,22 @@ export function ReceiptDialog({
         font-size: 10px; /* Adjust font size for small paper */
         color: #000;
         width: 100%;
+        line-height: 1.4;
       }
       .print-header, .print-footer {
         text-align: center;
+      }
+      .print-header img {
+        max-width: 50%;
+        margin: 0 auto 5px;
+      }
+      .print-header h1 {
+        font-size: 14px;
+        margin: 0;
+      }
+       .print-header p {
+        font-size: 10px;
+        margin: 0;
       }
       .print-item-list, .print-summary {
         margin-top: 10px;
@@ -77,6 +110,7 @@ export function ReceiptDialog({
       }
       .print-item .item-info {
         display: block;
+        word-break: break-all;
       }
       .print-separator {
         border-top: 1px dashed #000;
@@ -85,11 +119,13 @@ export function ReceiptDialog({
       .print-total {
         font-weight: bold;
       }
+      .print-footer {
+          white-space: pre-wrap; /* Preserve newlines in footer text */
+      }
     }
   `;
   
   const handlePrint = () => {
-    // This part is for printing visuals. The actual stock update happens onConfirm.
     const printContent = document.getElementById('receipt-content');
     if (printContent) {
       const receiptHtml = printContent.querySelector('#receipt-visual')?.innerHTML;
@@ -111,7 +147,7 @@ export function ReceiptDialog({
         setTimeout(() => {
              printWindow?.print();
              printWindow?.close();
-        }, 250); // Delay to allow content to render
+        }, 250);
       }
     }
   };
@@ -119,11 +155,12 @@ export function ReceiptDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" id="receipt-content">
-          {/* This is the visual representation inside the dialog, not for direct printing anymore */}
           <div id="receipt-visual">
-            <div className="print-header">
-                <DialogTitle className="text-center text-2xl font-headline">Toko Cepat</DialogTitle>
-                <p className="text-center text-sm text-muted-foreground">
+            <div className="print-header text-center">
+                {logo && <Image src={logo} alt="Logo Toko" width={48} height={48} className="mx-auto mb-2" />}
+                <h1 className="text-xl font-bold">{storeName}</h1>
+                {storeAddress && <p className="text-xs text-muted-foreground">{storeAddress}</p>}
+                <p className="text-xs text-muted-foreground mt-2">
                     {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
                 </p>
             </div>
@@ -134,12 +171,12 @@ export function ReceiptDialog({
             <Separator className="my-4 print-separator" />
             <div className="my-4 space-y-2 print-item-list">
             {items.map(item => (
-                <div key={item.id} className="flex justify-between items-center text-sm print-item">
-                <div>
+                <div key={item.id} className="flex justify-between items-start text-sm print-item">
+                <div className="max-w-[70%]">
                     <p className="font-medium item-info">{item.name}</p>
                     <p className="text-muted-foreground item-info">{item.quantity} x {formatCurrency(item.price)}</p>
                 </div>
-                <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
+                <p className="font-medium text-right">{formatCurrency(item.quantity * item.price)}</p>
                 </div>
             ))}
             </div>
@@ -174,8 +211,8 @@ export function ReceiptDialog({
             )}
             </div>
             <Separator className="my-4 print-separator"/>
-            <p className="text-center text-xs text-muted-foreground pt-4 print-footer">
-            Terima kasih telah berbelanja!
+            <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
+              {receiptFooter}
             </p>
         </div>
         <DialogFooter className="print:hidden sm:justify-between gap-2 mt-4">

@@ -35,6 +35,7 @@ export default function SettingsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [storeName, setStoreName] = React.useState("Toko Cepat");
     const [storeAddress, setStoreAddress] = React.useState("Jl. Jendral Sudirman No. 123, Jakarta");
+    const [receiptFooter, setReceiptFooter] = React.useState("Terima kasih telah berbelanja!");
     const [logo, setLogo] = React.useState<string | null>(null);
     const [categories, setCategories] = React.useState<Categories>({});
     const [newCategory, setNewCategory] = React.useState("");
@@ -49,10 +50,13 @@ export default function SettingsPage() {
         const savedAddress = localStorage.getItem("storeAddress");
         const savedLogo = localStorage.getItem("storeLogo");
         const savedCategories = localStorage.getItem("storeCategories");
+        const savedFooter = localStorage.getItem("receiptFooter");
         
         if (savedName) setStoreName(savedName);
         if (savedAddress) setStoreAddress(savedAddress);
         if (savedLogo) setLogo(savedLogo);
+        if (savedFooter) setReceiptFooter(savedFooter);
+
         if (savedCategories) {
             setCategories(JSON.parse(savedCategories));
         } else {
@@ -85,6 +89,11 @@ export default function SettingsPage() {
     const handleStoreAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setStoreAddress(e.target.value);
         localStorage.setItem("storeAddress", e.target.value);
+    };
+
+    const handleReceiptFooterChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setReceiptFooter(e.target.value);
+        localStorage.setItem("receiptFooter", e.target.value);
     };
 
     const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,8 +174,8 @@ export default function SettingsPage() {
       <div className="p-4 md:p-8 space-y-8">
         <Card>
           <CardHeader>
-            <CardTitle>Pengaturan Toko</CardTitle>
-            <CardDescription>Atur informasi dasar dan tampilan untuk toko Anda. Perubahan disimpan secara otomatis.</CardDescription>
+            <CardTitle>Pengaturan Toko & Struk</CardTitle>
+            <CardDescription>Atur informasi dasar, tampilan toko, dan struk belanja. Perubahan disimpan secara otomatis.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -194,6 +203,10 @@ export default function SettingsPage() {
                     </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Rekomendasi ukuran: 200x200px. Format: JPG, PNG.</p>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="receipt-footer">Teks Catatan Kaki Struk</Label>
+                <Textarea id="receipt-footer" value={receiptFooter} onChange={handleReceiptFooterChange} placeholder="cth: Terima kasih telah berbelanja! Barang yang sudah dibeli tidak dapat dikembalikan." />
             </div>
           </CardContent>
         </Card>
