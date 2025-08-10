@@ -111,6 +111,12 @@ export function ReceiptDialog({
       .print-item .item-info {
         display: block;
         word-break: break-all;
+        flex-shrink: 1;
+      }
+      .print-item .item-price {
+        white-space: nowrap;
+        padding-left: 8px;
+        flex-shrink: 0;
       }
       .print-separator {
         border-top: 1px dashed #000;
@@ -175,11 +181,11 @@ export function ReceiptDialog({
             <div className="my-4 space-y-2 print-item-list">
             {items.map(item => (
                 <div key={item.id} className="flex justify-between items-start text-sm print-item">
-                <div className="max-w-[70%]">
-                    <p className="font-medium item-info">{item.name}</p>
-                    <p className="text-muted-foreground item-info">{item.quantity} x {formatCurrency(item.price)}</p>
+                <div className="max-w-[70%] item-info">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-muted-foreground">{item.quantity} x {formatCurrency(item.price)}</p>
                 </div>
-                <p className="font-medium text-right">{formatCurrency(item.quantity * item.price)}</p>
+                <p className="font-medium text-right item-price">{formatCurrency(item.quantity * item.price)}</p>
                 </div>
             ))}
             </div>
