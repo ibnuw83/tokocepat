@@ -15,6 +15,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+// Extend the window interface for autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 const ALL_CASHIERS_VALUE = "ALL_CASHIERS";
 
@@ -98,29 +107,47 @@ export default function ReportsPage() {
     
     const handleDownload = () => {
         try {
-            // Download the filtered data
+            const doc = new jsPDF();
             const dataToDownload = filteredTransactions.length > 0 ? filteredTransactions : transactions;
-            const jsonString = JSON.stringify(dataToDownload, null, 2);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `laporan-transaksi-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+
+            // Add title
+            doc.text("Laporan Transaksi", 14, 16);
+            doc.setFontSize(10);
+            doc.text(`Tanggal Cetak: ${format(new Date(), "dd MMMM yyyy", { locale: id })}`, 14, 22);
+
+            // Add table
+            doc.autoTable({
+                startY: 30,
+                head: [['ID Transaksi', 'Tanggal', 'Pelanggan', 'Jumlah Item', 'Operator', 'Total']],
+                body: dataToDownload.map(trx => [
+                    trx.id,
+                    new Date(trx.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    trx.customerName || 'Umum',
+                    trx.items,
+                    trx.operator,
+                    formatCurrency(trx.total),
+                ]),
+                headStyles: { fillColor: [56, 30, 114] }, // Primary color
+                styles: { halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'left' },
+                    2: { halign: 'left' },
+                    5: { halign: 'right' },
+                }
+            });
+
+            doc.save(`laporan-transaksi-${new Date().toISOString().split('T')[0]}.pdf`);
 
             toast({
                 title: "Unduh Berhasil",
-                description: "Laporan transaksi telah berhasil diunduh.",
+                description: "Laporan transaksi PDF telah berhasil dibuat.",
             });
         } catch (error) {
-             console.error("Gagal mengunduh laporan", error);
+             console.error("Gagal mengunduh laporan PDF", error);
             toast({
                 variant: "destructive",
                 title: "Gagal Mengunduh",
-                description: "Terjadi kesalahan saat membuat file laporan.",
+                description: "Terjadi kesalahan saat membuat file laporan PDF.",
             });
         }
     }
@@ -181,7 +208,7 @@ export default function ReportsPage() {
                     )}
                     <Button variant="outline" onClick={handleDownload} disabled={transactions.length === 0} className="w-full sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
-                        Unduh
+                        Unduh PDF
                     </Button>
                 </div>
             </div>
