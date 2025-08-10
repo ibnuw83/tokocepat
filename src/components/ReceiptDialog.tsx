@@ -80,7 +80,7 @@ export function ReceiptDialog({
       .print-container {
         padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 12pt;
+        font-size: 11pt; /* Adjusted for 80mm */
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -97,32 +97,35 @@ export function ReceiptDialog({
         margin: 0;
       }
        .print-header p {
-        font-size: 11pt;
+        font-size: 10pt;
         margin: 0;
       }
       .print-item-list, .print-summary {
         margin-top: 8px;
         margin-bottom: 8px;
       }
-      .print-item {
+      .print-item .item-details {
         display: grid;
         grid-template-columns: 1fr auto;
         gap-x: 10px;
       }
       .print-item .item-name {
-        word-break: break-all;
+        word-break: break-word;
       }
       .print-item .item-total-price {
          text-align: right;
       }
       .print-item .item-qty-price {
-        font-size: 11pt;
-        grid-column: 1 / -1;
+        font-size: 10pt;
+        grid-column: 1; /* Aligns to left under item name */
       }
       .print-summary-line {
          display: grid;
-         grid-template-columns: auto 1fr;
+         grid-template-columns: 1fr auto;
          gap-x: 10px;
+      }
+      .print-summary-line .summary-label {
+        text-align: left;
       }
       .print-summary-line .summary-value {
         text-align: right;
@@ -138,7 +141,7 @@ export function ReceiptDialog({
       }
       .print-footer {
           white-space: pre-wrap;
-          font-size: 11pt;
+          font-size: 10pt;
       }
     }
   `;
@@ -190,11 +193,13 @@ export function ReceiptDialog({
                 Pelanggan: <span className="font-semibold">{customerName}</span>
             </div>
             <Separator className="my-4 print-separator" />
-            <div className="my-4 space-y-2 print-item-list">
+            <div className="my-4 space-y-3 print-item-list">
             {items.map(item => (
                 <div key={item.id} className="text-sm print-item">
-                    <p className="font-medium item-name">{item.name}</p>
-                    <p className="font-medium item-total-price">{formatCurrency(item.quantity * item.price)}</p>
+                    <div className="item-details">
+                        <p className="font-medium item-name">{item.name}</p>
+                        <p className="font-medium item-total-price">{formatCurrency(item.quantity * item.price)}</p>
+                    </div>
                     <p className="text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</p>
                 </div>
             ))}
@@ -202,29 +207,29 @@ export function ReceiptDialog({
             <Separator className="my-4 print-separator"/>
             <div className="my-4 space-y-2 print-summary">
                 <div className="print-summary-line text-sm">
-                    <p>Subtotal</p>
+                    <p className="summary-label">Subtotal</p>
                     <p className="summary-value">{formatCurrency(subtotal)}</p>
                 </div>
                 <div className="print-summary-line text-sm">
-                    <p>Diskon</p>
+                    <p className="summary-label">Diskon</p>
                     <p className="summary-value">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : formatCurrency(0)}</p>
                 </div>
                 <div className="print-summary-line font-bold text-base print-total">
-                    <p>Total</p>
+                    <p className="summary-label">Total</p>
                     <p className="summary-value">{formatCurrency(total)}</p>
                 </div>
                 <Separator className="my-2 print-separator"/>
                 <div className="print-summary-line text-sm">
-                    <p>Pembayaran ({paymentMethod})</p>
+                    <p className="summary-label">Pembayaran ({paymentMethod})</p>
                     <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
                 </div>
                 <div className="print-summary-line text-sm">
-                    <p>Kembalian</p>
+                    <p className="summary-label">Kembalian</p>
                     <p className="summary-value">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
                 </div>
                 {paymentMethod !== 'Tunai' && paymentRef && (
                     <div className="print-summary-line text-sm">
-                        <p>No. Ref</p>
+                        <p className="summary-label">No. Ref</p>
                         <p className="summary-value">{paymentRef}</p>
                     </div>
                 )}
