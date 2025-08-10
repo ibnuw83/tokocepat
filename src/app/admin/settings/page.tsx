@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload } from "lucide-react";
+import { Upload, Download, UploadCloud } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +20,7 @@ export default function SettingsPage() {
     const [logo, setLogo] = React.useState<string | null>(null);
     const router = useRouter();
     const { toast } = useToast();
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -69,6 +70,8 @@ export default function SettingsPage() {
             if (logo) {
                 localStorage.setItem("storeLogo", logo);
             }
+             // Dispatch a storage event to notify other components like Sidebar
+            window.dispatchEvent(new Event('storage'));
             toast({
                 title: "Pengaturan Disimpan",
                 description: "Perubahan pada informasi toko telah berhasil disimpan.",
@@ -82,10 +85,93 @@ export default function SettingsPage() {
             });
         }
     }
+
+    const handleBackup = () => {
+        try {
+            const dataToBackup: { [key: string]: any } = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    dataToBackup[key] = localStorage.getItem(key);
+                }
+            }
+
+            const jsonString = JSON.stringify(dataToBackup, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `toko-cepat-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            toast({
+                title: "Backup Berhasil",
+                description: "Data aplikasi telah berhasil diunduh.",
+            });
+        } catch (error) {
+             console.error("Failed to backup data", error);
+            toast({
+                variant: "destructive",
+                title: "Gagal Backup",
+                description: "Terjadi kesalahan saat membuat file cadangan.",
+            });
+        }
+    }
+
+    const handleRestoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!event.target.files || event.target.files.length === 0) {
+            return;
+        }
+        const file = event.target.files[0];
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') {
+                    throw new Error("File tidak valid.");
+                }
+                const data = JSON.parse(text);
+                
+                // Clear existing local storage before restoring
+                // Be careful with this in a real app, maybe merge instead
+                // localStorage.clear();
+
+                for (const key in data) {
+                    if (Object.prototype.hasOwnProperty.call(data, key)) {
+                        localStorage.setItem(key, data[key]);
+                    }
+                }
+                 // Dispatch a storage event to notify other components
+                window.dispatchEvent(new Event('storage'));
+
+                toast({
+                    title: "Pemulihan Berhasil",
+                    description: "Data telah dipulihkan. Muat ulang halaman untuk melihat perubahan.",
+                });
+
+                // Reload to apply changes everywhere
+                setTimeout(() => window.location.reload(), 1500);
+
+            } catch (error) {
+                console.error("Failed to restore data", error);
+                toast({
+                    variant: "destructive",
+                    title: "Gagal Memulihkan Data",
+                    description: "File cadangan tidak valid atau rusak.",
+                });
+            }
+        };
+
+        reader.readAsText(file);
+    }
     
   return (
     <AdminLayout>
-      <div className="p-4 md:p-8">
+      <div className="p-4 md:p-8 space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Pengaturan Toko</CardTitle>
@@ -124,6 +210,48 @@ export default function SettingsPage() {
           <CardFooter>
             <Button onClick={handleSaveChanges}>Simpan Perubahan</Button>
           </CardFooter>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Cadangkan & Pulihkan Data</CardTitle>
+                <CardDescription>Simpan data aplikasi Anda atau pulihkan dari file cadangan.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div>
+                    <Label className="block mb-2">Backup Data</Label>
+                    <p className="text-sm text-muted-foreground pb-2">
+                        Unduh semua data penting (stok, transaksi, pengguna, dll.) dalam satu file JSON.
+                    </p>
+                    <Button variant="outline" onClick={handleBackup}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Unduh File Backup
+                    </Button>
+                </div>
+                 <div>
+                    <Label className="block mb-2">Pulihkan Data</Label>
+                     <p className="text-sm text-muted-foreground pb-2">
+                        Pilih file backup (.json) untuk mengembalikan data aplikasi Anda.
+                    </p>
+                    <Input 
+                        id="restore" 
+                        type="file" 
+                        className="hidden" 
+                        accept=".json"
+                        ref={fileInputRef}
+                        onChange={handleRestoreChange}
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <UploadCloud className="mr-2 h-4 w-4" />
+                        Pilih File & Pulihkan
+                    </Button>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <p className="text-xs text-muted-foreground">
+                    Penting: Proses pemulihan akan menimpa data yang ada saat ini. Pastikan Anda memilih file yang benar.
+                </p>
+            </CardFooter>
         </Card>
       </div>
     </AdminLayout>
