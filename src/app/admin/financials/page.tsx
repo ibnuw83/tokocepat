@@ -358,21 +358,20 @@ export default function FinancialsPage() {
     <>
     <AdminLayout>
       <div className="p-4 md:p-8 grid gap-8">
-        <div className="flex justify-between items-start">
-            <div>
-                <h1 className="text-3xl font-bold font-headline">Laporan Keuangan</h1>
-                <p className="text-muted-foreground">Ringkasan, catatan modal, dan pengeluaran toko Anda.</p>
-            </div>
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={handleDownloadProfitLoss}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Unduh Laba Rugi (PDF)
-                </Button>
-                <Button variant="outline" onClick={handleDownloadBalanceSheet}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Unduh Neraca (PDF)
-                </Button>
-            </div>
+        <div>
+            <h1 className="text-3xl font-bold font-headline">Laporan Keuangan</h1>
+            <p className="text-muted-foreground">Ringkasan, catatan modal, dan pengeluaran toko Anda.</p>
+        </div>
+        
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadProfitLoss}>
+                <Download className="mr-2 h-4 w-4" />
+                Unduh Laba Rugi (PDF)
+            </Button>
+            <Button variant="outline" onClick={handleDownloadBalanceSheet}>
+                <Download className="mr-2 h-4 w-4" />
+                Unduh Neraca (PDF)
+            </Button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
