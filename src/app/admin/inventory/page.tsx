@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowUp, ArrowDown } from "lucide-react";
 import { StockAdjustmentDialog } from "@/components/StockAdjustmentDialog";
 import { AddItemDialog } from "@/components/AddItemDialog";
+import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data for inventory
 const initialInventoryItems = [
-  { id: "ITEM001", name: "Kopi Susu", stock: 50, price: 18000 },
-  { id: "ITEM002", name: "Roti Coklat", stock: 35, price: 10000 },
-  { id: "ITEM003", name: "Teh Manis", stock: 80, price: 8000 },
-  { id: "ITEM004", name: "Donat Gula", stock: 42, price: 7000 },
+  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", stock: 50, price: 18000 },
+  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", stock: 35, price: 10000 },
+  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", stock: 80, price: 8000 },
+  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", stock: 42, price: 7000 },
 ];
 
 export type InventoryItem = typeof initialInventoryItems[0];
@@ -25,9 +27,14 @@ export default function InventoryPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [isAdjustmentDialogOpen, setAdjustmentDialogOpen] = React.useState(false);
     const [isAddItemDialogOpen, setAddItemDialogOpen] = React.useState(false);
+    const [isScannerOpen, setScannerOpen] = React.useState(false);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
     const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
+    const { toast } = useToast();
     const router = useRouter();
+
+    // This ref will hold the function to update the form field in AddItemDialog
+    const setBarcodeInDialogRef = React.useRef<(barcode: string) => void>(() => {});
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -73,9 +80,10 @@ export default function InventoryPage() {
         });
     }
 
-    const handleAddNewItem = (name: string, price: number, stock: number) => {
+    const handleAddNewItem = (barcode: string, name: string, price: number, stock: number) => {
         const newItem: InventoryItem = {
             id: `ITEM${Date.now()}`,
+            barcode,
             name,
             price,
             stock
@@ -83,6 +91,16 @@ export default function InventoryPage() {
         setInventoryItems(prev => [...prev, newItem]);
     };
 
+    function handleBarcodeScanned(decodedText: string) {
+        toast({
+            title: "Barcode Terdeteksi",
+            description: `Kode: ${decodedText}.`,
+        });
+        if (setBarcodeInDialogRef.current) {
+            setBarcodeInDialogRef.current(decodedText);
+        }
+        setScannerOpen(false);
+    }
 
   return (
     <>
@@ -116,6 +134,7 @@ export default function InventoryPage() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>ID Barang</TableHead>
+                        <TableHead>Kode Barcode</TableHead>
                         <TableHead>Nama Barang</TableHead>
                         <TableHead>Harga Satuan</TableHead>
                         <TableHead className="text-right">Jumlah Stok</TableHead>
@@ -125,6 +144,7 @@ export default function InventoryPage() {
                         {inventoryItems.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.id}</TableCell>
+                            <TableCell>{item.barcode}</TableCell>
                             <TableCell>{item.name}</TableCell>
                             <TableCell>{formatCurrency(item.price)}</TableCell>
                             <TableCell className="text-right font-semibold">{item.stock}</TableCell>
@@ -148,6 +168,13 @@ export default function InventoryPage() {
             isOpen={isAddItemDialogOpen}
             onClose={() => setAddItemDialogOpen(false)}
             onSave={handleAddNewItem}
+            onOpenScanner={() => setScannerOpen(true)}
+            setBarcodeSetter={(setter) => { setBarcodeInDialogRef.current = setter; }}
+        />
+        <BarcodeScannerDialog
+            isOpen={isScannerOpen}
+            onClose={() => setScannerOpen(false)}
+            onScanSuccess={handleBarcodeScanned}
         />
     </>
   );
