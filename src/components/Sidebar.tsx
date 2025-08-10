@@ -5,10 +5,12 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { CreditCard, FileText, Box } from "lucide-react";
+import { CreditCard, FileText, Box, Package, BookCopy } from "lucide-react";
 
 const menuItems = [
   { href: "/transactions", icon: CreditCard, label: "Kasir" },
+  { href: "/admin/inventory", icon: Package, label: "Manajemen Stok" },
+  { href: "/admin/financials", icon: BookCopy, label: "Laporan Keuangan" },
   { href: "/admin/reports", icon: FileText, label: "Laporan Transaksi" },
 ];
 
