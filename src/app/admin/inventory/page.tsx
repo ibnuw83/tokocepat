@@ -13,8 +13,19 @@ import { AddItemDialog } from "@/components/AddItemDialog";
 import { BarcodeScannerDialog } from "@/components/BarcodeScannerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { EditItemDialog } from "@/components/EditItemDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 
 // Mock data for inventory
 const initialInventoryItems = [
@@ -32,6 +43,8 @@ export default function InventoryPage() {
     const [isAddItemDialogOpen, setAddItemDialogOpen] = React.useState(false);
     const [isScannerOpen, setScannerOpen] = React.useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+    const [isDeleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+    const [itemToDelete, setItemToDelete] = React.useState<InventoryItem | null>(null);
     const [editingItem, setEditingItem] = React.useState<InventoryItem | null>(null);
     const [adjustmentType, setAdjustmentType] = React.useState<"in" | "out">("in");
     const [inventoryItems, setInventoryItems] = React.useState<InventoryItem[]>(initialInventoryItems);
@@ -97,6 +110,24 @@ export default function InventoryPage() {
         setEditingItem(item);
         setEditDialogOpen(true);
     };
+    
+    const handleOpenDeleteDialog = (item: InventoryItem) => {
+        setItemToDelete(item);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteItem = () => {
+        if (!itemToDelete) return;
+        setInventoryItems(prevItems => prevItems.filter(item => item.id !== itemToDelete.id));
+        toast({
+            variant: "destructive",
+            title: "Barang Dihapus",
+            description: `Barang "${itemToDelete.name}" telah berhasil dihapus.`,
+        });
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
+    };
+
 
     const handleUpdateItem = (updatedItem: InventoryItem) => {
         setInventoryItems(prevItems => 
@@ -192,6 +223,13 @@ export default function InventoryPage() {
                                         <DropdownMenuItem onClick={() => handleEditItem(item)}>
                                             Edit
                                         </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => handleOpenDeleteDialog(item)}
+                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                        >
+                                            Hapus
+                                        </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </TableCell>
@@ -234,6 +272,24 @@ export default function InventoryPage() {
             onClose={() => setScannerOpen(false)}
             onScanSuccess={handleBarcodeScanned}
         />
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Tindakan ini tidak dapat dibatalkan. Ini akan menghapus barang
+                        <span className="font-bold"> "{itemToDelete?.name}" </span>
+                        secara permanen dari daftar inventaris Anda.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Batal</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteItem}>Ya, Hapus</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
+
+    
