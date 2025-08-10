@@ -80,7 +80,7 @@ export function ReceiptDialog({
       .print-container {
         padding: 10px;
         font-family: 'Courier New', monospace;
-        font-size: 12pt; /* Adjusted for 80mm */
+        font-size: 12pt;
         color: #000;
         width: 100%;
         line-height: 1.4;
@@ -104,47 +104,28 @@ export function ReceiptDialog({
         margin-top: 8px;
         margin-bottom: 8px;
       }
-      .print-item-row {
+      .print-row {
         display: grid;
         grid-template-columns: 1fr auto;
-        gap-x: 16px; /* Increased gap */
+        gap: 12px;
       }
-      .print-item-row > div:first-child {
-        justify-self: start;
+      .print-row .left {
         text-align: left;
+        word-break: break-word;
       }
-      .print-item-row > div:last-child,
-      .print-item-row > p:last-child {
-        justify-self: end;
+      .print-row .right {
         text-align: right;
         white-space: nowrap;
-      }
-      .item-name {
-        word-break: break-word;
       }
       .item-qty-price {
         font-size: 10pt;
         color: #555;
       }
-      .print-summary-line {
-         display: grid;
-         grid-template-columns: 1fr auto;
-         gap-x: 16px; /* Increased gap */
-      }
-      .print-summary-line > p:first-child {
-        justify-self: start;
-        text-align: left;
-      }
-       .print-summary-line > p:last-child {
-        justify-self: end;
-        text-align: right;
-        white-space: nowrap;
-      }
       .print-separator {
         border-top: 1px dashed #000;
         margin: 8px 0;
       }
-      .print-total {
+      .print-total .right {
         font-weight: bold;
         font-size: 14pt;
       }
@@ -186,70 +167,71 @@ export function ReceiptDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md" id="receipt-content">
         <DialogHeader>
-            <DialogTitle>Pratinjau Struk</DialogTitle>
+          <DialogTitle>Pratinjau Struk</DialogTitle>
         </DialogHeader>
-          <div id="receipt-visual">
-            <div className="print-header text-center">
-                {logo && <Image src={logo} alt="Logo Toko" width={48} height={48} className="mx-auto mb-2" />}
-                <h1 className="text-xl font-bold">{storeName}</h1>
-                {storeAddress && <p className="text-xs text-muted-foreground">{storeAddress}</p>}
-                <p className="text-xs text-muted-foreground mt-2">
-                    {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
-                </p>
-            </div>
-            <Separator className="my-4 print-separator" />
-            <div className="text-sm">
-                Pelanggan: <span className="font-semibold">{customerName}</span>
-            </div>
-            <Separator className="my-4 print-separator" />
-            <div className="my-4 space-y-3 print-item-list">
-            {items.map(item => (
-                <div key={item.id} className="text-sm">
-                    <div className="print-item-row">
-                        <div className="font-medium item-name">{item.name}</div>
-                        <p className="font-medium">{formatCurrency(item.quantity * item.price)}</p>
-                    </div>
-                    <div className="print-item-row">
-                      <div className="text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</div>
-                    </div>
-                </div>
-            ))}
-            </div>
-            <Separator className="my-4 print-separator"/>
-            <div className="my-4 space-y-2 print-summary">
-                <div className="print-summary-line text-sm">
-                    <p>Subtotal</p>
-                    <p>{formatCurrency(subtotal)}</p>
-                </div>
-                <div className="print-summary-line text-sm">
-                    <p>Diskon</p>
-                    <p>{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : formatCurrency(0)}</p>
-                </div>
-                <div className="print-summary-line font-bold text-base print-total">
-                    <p>Total</p>
-                    <p>{formatCurrency(total)}</p>
-                </div>
-                <Separator className="my-2 print-separator"/>
-                <div className="print-summary-line text-sm">
-                    <p>Pembayaran ({paymentMethod})</p>
-                    <p>{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</p>
-                </div>
-                <div className="print-summary-line text-sm">
-                    <p>Kembalian</p>
-                    <p>{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</p>
-                </div>
-                {paymentMethod !== 'Tunai' && paymentRef && (
-                    <div className="print-summary-line text-sm">
-                        <p>No. Ref</p>
-                        <p>{paymentRef}</p>
-                    </div>
-                )}
-            </div>
-            <Separator className="my-4 print-separator"/>
-            <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
-              {receiptFooter}
-            </p>
-        </div>
+        <div id="receipt-visual">
+          <div className="print-header text-center">
+              {logo && <Image src={logo} alt="Logo Toko" width={48} height={48} className="mx-auto mb-2" />}
+              <h1 className="text-xl font-bold">{storeName}</h1>
+              {storeAddress && <p className="text-xs text-muted-foreground">{storeAddress}</p>}
+              <p className="text-xs text-muted-foreground mt-2">
+                  {new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+              </p>
+          </div>
+          <Separator className="my-4 print-separator" />
+          <div className="text-sm print-row">
+              <span className="left">Pelanggan</span>
+              <span className="right font-semibold">{customerName}</span>
+          </div>
+          <Separator className="my-4 print-separator" />
+          <div className="my-4 space-y-3 print-item-list">
+          {items.map(item => (
+              <div key={item.id} className="text-sm">
+                  <div className="print-row">
+                      <div className="left font-medium">{item.name}</div>
+                      <div className="right font-medium">{formatCurrency(item.quantity * item.price)}</div>
+                  </div>
+                  <div className="print-row">
+                    <div className="left text-muted-foreground item-qty-price">{item.quantity} x {formatCurrency(item.price)}</div>
+                  </div>
+              </div>
+          ))}
+          </div>
+          <Separator className="my-4 print-separator"/>
+          <div className="my-4 space-y-2 print-summary">
+              <div className="print-row text-sm">
+                  <span className="left">Subtotal</span>
+                  <span className="right">{formatCurrency(subtotal)}</span>
+              </div>
+              <div className="print-row text-sm">
+                  <span className="left">Diskon</span>
+                  <span className="right">{discountAmount > 0 ? `- ${formatCurrency(discountAmount)}` : `${formatCurrency(0)}`}</span>
+              </div>
+              <div className="print-row font-bold text-base print-total">
+                  <span className="left">Total</span>
+                  <span className="right">{formatCurrency(total)}</span>
+              </div>
+              <Separator className="my-2 print-separator"/>
+              <div className="print-row text-sm">
+                  <span className="left">Pembayaran ({paymentMethod})</span>
+                  <span className="right">{formatCurrency(paymentMethod === 'Tunai' ? paymentAmount : total)}</span>
+              </div>
+              <div className="print-row text-sm">
+                  <span className="left">Kembalian</span>
+                  <span className="right">{formatCurrency(paymentMethod === 'Tunai' ? changeAmount : 0)}</span>
+              </div>
+              {paymentMethod !== 'Tunai' && paymentRef && (
+                  <div className="print-row text-sm">
+                      <span className="left">No. Ref</span>
+                      <span className="right">{paymentRef}</span>
+                  </div>
+              )}
+          </div>
+          <Separator className="my-4 print-separator"/>
+          <p className="text-center text-xs text-muted-foreground pt-4 print-footer whitespace-pre-wrap">
+            {receiptFooter}
+          </p>
+      </div>
         <DialogFooter className="print:hidden sm:justify-between gap-2 mt-4">
           <Button onClick={handlePrint} variant="outline" className="transition-transform active:scale-95 w-full sm:w-auto">
             <Printer className="mr-2 h-4 w-4" /> Cetak Struk
