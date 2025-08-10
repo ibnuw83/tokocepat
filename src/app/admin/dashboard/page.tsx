@@ -10,10 +10,7 @@ import Link from "next/link";
 import type { Transaction } from "@/lib/types";
 import type { InventoryItem } from "../inventory/page";
 import type { Customer } from "../customers/page";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-type FinancialEntry = { id: string; date: string; description: string; amount: number };
+import type { FinancialEntry } from "../financials/page";
 
 export default function AdminDashboardPage() {
     const [isMounted, setIsMounted] = React.useState(false);
@@ -31,35 +28,31 @@ export default function AdminDashboardPage() {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
     }
 
-    const loadDashboardData = React.useCallback(async () => {
-        try {
-            const transactionsSnapshot = await getDocs(collection(db, "transactions"));
-            const transactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+    const loadDashboardData = React.useCallback(() => {
+        const storedTransactions = localStorage.getItem("transactions");
+        const transactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+        
+        const storedInventory = localStorage.getItem("inventoryItems");
+        const inventory: InventoryItem[] = storedInventory ? JSON.parse(storedInventory) : [];
 
-            const inventorySnapshot = await getDocs(collection(db, "inventory"));
-            const inventory: InventoryItem[] = inventorySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        const storedCustomers = localStorage.getItem("customers");
+        const customers: Customer[] = storedCustomers ? JSON.parse(storedCustomers) : [];
 
-            const customersSnapshot = await getDocs(collection(db, "customers"));
-            const customers: Customer[] = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+        const storedExpenses = localStorage.getItem("expenses");
+        const expenses: FinancialEntry[] = storedExpenses ? JSON.parse(storedExpenses) : [];
 
-            const expensesSnapshot = await getDocs(collection(db, "expenses"));
-            const expenses: FinancialEntry[] = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialEntry));
-
-            const totalRevenue = transactions.reduce((sum, t) => sum + t.total, 0);
-            const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-            const netProfit = totalRevenue - totalExpenses;
-            
-            setStats({
-                totalRevenue,
-                totalExpenses,
-                netProfit,
-                itemVariants: inventory.length,
-                totalCustomers: customers.length,
-                totalTransactions: transactions.length,
-            });
-        } catch (error) {
-            console.error("Error loading dashboard data:", error);
-        }
+        const totalRevenue = transactions.reduce((sum, t) => sum + t.total, 0);
+        const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+        const netProfit = totalRevenue - totalExpenses;
+        
+        setStats({
+            totalRevenue,
+            totalExpenses,
+            netProfit,
+            itemVariants: inventory.length,
+            totalCustomers: customers.length,
+            totalTransactions: transactions.length,
+        });
     }, []);
 
     React.useEffect(() => {
@@ -70,6 +63,12 @@ export default function AdminDashboardPage() {
         } else {
             setIsMounted(true);
             loadDashboardData();
+            
+            // Listen to storage changes to keep dashboard updated
+            window.addEventListener('storage', loadDashboardData);
+            return () => {
+                window.removeEventListener('storage', loadDashboardData);
+            }
         }
     }, [router, loadDashboardData]);
     

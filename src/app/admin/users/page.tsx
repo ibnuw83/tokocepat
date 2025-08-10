@@ -24,8 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import type { User } from "@/lib/types";
 import { AddUserDialog } from "@/components/AddUserDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { initialUsers } from "@/lib/users";
 
 
 export default function UsersPage() {
@@ -39,6 +38,23 @@ export default function UsersPage() {
     const router = useRouter();
     const { toast } = useToast();
 
+    // --- LocalStorage Logic ---
+    const loadUsersFromStorage = React.useCallback(() => {
+        const storedUsers = localStorage.getItem("app-users");
+        if (storedUsers) {
+            setUsers(JSON.parse(storedUsers));
+        } else {
+            localStorage.setItem("app-users", JSON.stringify(initialUsers));
+            setUsers(initialUsers);
+        }
+    }, []);
+
+    const saveUsersToStorage = React.useCallback((updatedUsers: User[]) => {
+        setUsers(updatedUsers);
+        localStorage.setItem("app-users", JSON.stringify(updatedUsers));
+        window.dispatchEvent(new Event("storage"));
+    }, []);
+
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
         const userRole = sessionStorage.getItem("userRole");
@@ -47,13 +63,13 @@ export default function UsersPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
-            const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-                const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                setUsers(usersData);
-            });
-            return () => unsubscribe();
+            loadUsersFromStorage();
+            window.addEventListener('storage', loadUsersFromStorage);
+            return () => {
+                window.removeEventListener('storage', loadUsersFromStorage);
+            };
         }
-    }, [router]);
+    }, [router, loadUsersFromStorage]);
     
     if (!isMounted) {
         return (
@@ -69,34 +85,28 @@ export default function UsersPage() {
         );
     }
     
-    const handleAddNewUser = async (values: Omit<User, 'id' | 'status'>) => {
-        try {
-            const newUser = { ...values, status: 'active' };
-            await addDoc(collection(db, "users"), newUser);
-            toast({
-                title: "Pengguna Ditambahkan",
-                description: `Pengguna ${values.username} telah berhasil dibuat.`
-            })
-        } catch (error) {
-            console.error("Error adding user: ", error);
-            toast({ variant: "destructive", title: "Gagal Menambahkan" });
-        }
+    const handleAddNewUser = (values: Omit<User, 'id' | 'status'>) => {
+        const newUser: User = { 
+            ...values,
+            id: `user-${Date.now()}`,
+            status: 'active'
+        };
+        const updatedUsers = [...users, newUser];
+        saveUsersToStorage(updatedUsers);
+        toast({
+            title: "Pengguna Ditambahkan",
+            description: `Pengguna ${values.username} telah berhasil dibuat.`
+        });
     };
     
-    const handleEditUser = async (values: User) => {
-        try {
-            const userRef = doc(db, "users", values.id);
-            const { id, ...dataToUpdate } = values;
-            await updateDoc(userRef, dataToUpdate);
-            toast({
-                title: "Pengguna Diperbarui",
-                description: `Data untuk ${values.username} telah diperbarui.`
-            });
-            setUserToEdit(null);
-        } catch (error) {
-            console.error("Error updating user: ", error);
-            toast({ variant: "destructive", title: "Gagal Memperbarui" });
-        }
+    const handleEditUser = (values: User) => {
+        const updatedUsers = users.map(u => u.id === values.id ? values : u);
+        saveUsersToStorage(updatedUsers);
+        toast({
+            title: "Pengguna Diperbarui",
+            description: `Data untuk ${values.username} telah diperbarui.`
+        });
+        setUserToEdit(null);
     }
 
     const handleOpenEditDialog = (user: User) => {
@@ -117,23 +127,24 @@ export default function UsersPage() {
         setToggleStatusDialogOpen(true);
     }
 
-    const handleConfirmToggleStatus = async () => {
+    const handleConfirmToggleStatus = () => {
         if (!userToToggle) return;
-        try {
-            const userRef = doc(db, "users", userToToggle.id);
-            const newStatus = userToToggle.status === 'active' ? 'inactive' : 'active';
-            await updateDoc(userRef, { status: newStatus });
-            toast({
-                title: "Status Pengguna Diperbarui",
-                description: `Pengguna "${userToToggle.username}" telah di${newStatus === 'active' ? 'aktifkan' : 'nonaktifkan'}.`,
-            });
-        } catch (error) {
-            console.error("Error toggling user status: ", error);
-            toast({ variant: "destructive", title: "Gagal Memperbarui Status" });
-        } finally {
-            setToggleStatusDialogOpen(false);
-            setUserToToggle(null);
-        }
+
+        const updatedUsers = users.map(u => {
+            if (u.id === userToToggle.id) {
+                return { ...u, status: u.status === 'active' ? 'inactive' : 'active' };
+            }
+            return u;
+        });
+        saveUsersToStorage(updatedUsers);
+
+        toast({
+            title: "Status Pengguna Diperbarui",
+            description: `Pengguna "${userToToggle.username}" telah di${userToToggle.status === 'active' ? 'nonaktifkan' : 'aktifkan'}.`,
+        });
+
+        setToggleStatusDialogOpen(false);
+        setUserToToggle(null);
     }
     
   return (

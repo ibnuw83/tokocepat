@@ -7,8 +7,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings, LayoutDashboard, UserCog } from "lucide-react";
 import Image from "next/image";
-import { collection, query, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 const allMenuItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -33,16 +31,15 @@ export function Sidebar() {
   const [logo, setLogo] = React.useState<string | null>(null);
   const [menuItems, setMenuItems] = React.useState(allMenuItems);
 
-  React.useEffect(() => {
-    const settingsQuery = query(collection(db, "settings"));
-    const unsubscribe = onSnapshot(settingsQuery, (snapshot) => {
-        if (!snapshot.empty) {
-            const settingsData = snapshot.docs[0].data();
-            setStoreName(settingsData.storeName || "Toko Cepat");
-            setLogo(settingsData.logo || null);
-        }
-    });
+  const loadSettings = React.useCallback(() => {
+    const savedName = localStorage.getItem("storeName");
+    const savedLogo = localStorage.getItem("storeLogo");
+    if (savedName) setStoreName(savedName);
+    if (savedLogo) setLogo(savedLogo);
+  }, []);
 
+  React.useEffect(() => {
+    loadSettings();
     const userRole = sessionStorage.getItem("userRole");
     if (userRole === 'Kasir') {
         setMenuItems(cashierMenuItems);
@@ -50,8 +47,9 @@ export function Sidebar() {
         setMenuItems(allMenuItems);
     }
 
-    return () => unsubscribe();
-  }, []);
+    window.addEventListener('storage', loadSettings);
+    return () => window.removeEventListener('storage', loadSettings);
+  }, [loadSettings]);
 
   return (
     <aside className="w-64 bg-card border-r flex-col hidden md:flex">

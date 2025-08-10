@@ -31,9 +31,10 @@ export function CustomerSearchComboBox({ customers, selectedCustomer, onCustomer
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
 
-  const handleSelect = (customer: Customer) => {
+  const handleSelect = (customerName: string) => {
+    const customer = customers.find(c => c.name.toLowerCase() === customerName.toLowerCase()) || null;
     onCustomerSelect(customer);
-    setSearchValue(customer.name.toLowerCase());
+    setSearchValue(customer ? customer.name.toLowerCase() : "");
     setOpen(false);
   }
 
@@ -71,7 +72,7 @@ export function CustomerSearchComboBox({ customers, selectedCustomer, onCustomer
                     <CommandItem
                         key={customer.id}
                         value={customer.name}
-                        onSelect={() => handleSelect(customer)}
+                        onSelect={handleSelect}
                     >
                         <Check
                             className={cn(

@@ -22,8 +22,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { Transaction } from "@/lib/types";
 
 
@@ -33,6 +31,10 @@ export type Customer = {
   phone: string;
 };
 
+const initialCustomers: Customer[] = [
+    { id: 'CUST001', name: 'Pelanggan Setia', phone: '081234567890' },
+];
+
 export default function CustomersPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [isAddDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -41,9 +43,31 @@ export default function CustomersPage() {
     const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
     const [customerToEdit, setCustomerToEdit] = React.useState<Customer | null>(null);
     const [customers, setCustomers] = React.useState<Customer[]>([]);
-    const [transactions, setTransactions] = React.useState<any[]>([]);
+    const [transactions, setTransactions] = React.useState<Transaction[]>([]);
     const router = useRouter();
     const { toast } = useToast();
+
+    // --- LocalStorage Logic ---
+    const loadDataFromStorage = React.useCallback(() => {
+        const storedCustomers = localStorage.getItem("customers");
+        if (storedCustomers) {
+            setCustomers(JSON.parse(storedCustomers));
+        } else {
+            localStorage.setItem("customers", JSON.stringify(initialCustomers));
+            setCustomers(initialCustomers);
+        }
+        
+        const storedTransactions = localStorage.getItem("transactions");
+        if (storedTransactions) {
+            setTransactions(JSON.parse(storedTransactions));
+        }
+    }, []);
+
+    const saveDataToStorage = React.useCallback((updatedCustomers: Customer[]) => {
+        setCustomers(updatedCustomers);
+        localStorage.setItem("customers", JSON.stringify(updatedCustomers));
+        window.dispatchEvent(new Event("storage"));
+    }, []);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -51,22 +75,14 @@ export default function CustomersPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
-            const unsubCustomers = onSnapshot(collection(db, "customers"), (snapshot) => {
-                const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-                setCustomers(customersData);
-            });
+            loadDataFromStorage();
             
-            const unsubTransactions = onSnapshot(collection(db, "transactions"), (snapshot) => {
-                const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-                setTransactions(transactionsData);
-            });
-
+            window.addEventListener('storage', loadDataFromStorage);
             return () => {
-                unsubCustomers();
-                unsubTransactions();
+                window.removeEventListener('storage', loadDataFromStorage);
             };
         }
-    }, [router]);
+    }, [router, loadDataFromStorage]);
     
     if (!isMounted) {
         return (
@@ -82,32 +98,27 @@ export default function CustomersPage() {
         );
     }
     
-    const handleAddNewCustomer = async (values: Omit<Customer, 'id'>) => {
-        try {
-            await addDoc(collection(db, "customers"), values);
-            toast({
-                title: "Pelanggan Ditambahkan",
-                description: `${values.name} telah ditambahkan ke daftar pelanggan.`
-            })
-        } catch (error) {
-            console.error("Error adding customer: ", error);
-            toast({ variant: "destructive", title: "Gagal Menambahkan" });
-        }
+    const handleAddNewCustomer = (values: Omit<Customer, 'id'>) => {
+        const newCustomer: Customer = {
+            ...values,
+            id: `CUST${Date.now()}`
+        };
+        const updatedCustomers = [...customers, newCustomer];
+        saveDataToStorage(updatedCustomers);
+        toast({
+            title: "Pelanggan Ditambahkan",
+            description: `${values.name} telah ditambahkan ke daftar pelanggan.`
+        });
     };
     
-    const handleEditCustomer = async (values: Customer) => {
-        try {
-            const customerRef = doc(db, "customers", values.id);
-            await updateDoc(customerRef, { name: values.name, phone: values.phone });
-            toast({
-                title: "Pelanggan Diperbarui",
-                description: `Data untuk ${values.name} telah diperbarui.`
-            });
-            setCustomerToEdit(null);
-        } catch (error) {
-            console.error("Error updating customer: ", error);
-            toast({ variant: "destructive", title: "Gagal Memperbarui" });
-        }
+    const handleEditCustomer = (values: Customer) => {
+        const updatedCustomers = customers.map(c => c.id === values.id ? values : c);
+        saveDataToStorage(updatedCustomers);
+        toast({
+            title: "Pelanggan Diperbarui",
+            description: `Data untuk ${values.name} telah diperbarui.`
+        });
+        setCustomerToEdit(null);
     }
 
     const handleOpenEditDialog = (customer: Customer) => {
@@ -120,7 +131,7 @@ export default function CustomersPage() {
         setDeleteDialogOpen(true);
     }
 
-    const handleConfirmDelete = async () => {
+    const handleConfirmDelete = () => {
         if (!customerToDelete) return;
 
         const customerTransactionCount = getCustomerTransactionCount(customerToDelete.id);
@@ -135,20 +146,17 @@ export default function CustomersPage() {
             return;
         }
 
-        try {
-            await deleteDoc(doc(db, "customers", customerToDelete.id));
-            toast({
-                variant: "destructive",
-                title: "Pelanggan Dihapus",
-                description: `Pelanggan "${customerToDelete.name}" telah berhasil dihapus.`,
-            });
-        } catch (error) {
-             console.error("Error deleting customer: ", error);
-            toast({ variant: "destructive", title: "Gagal Menghapus" });
-        } finally {
-            setDeleteDialogOpen(false);
-            setCustomerToDelete(null);
-        }
+        const updatedCustomers = customers.filter(c => c.id !== customerToDelete.id);
+        saveDataToStorage(updatedCustomers);
+
+        toast({
+            variant: "destructive",
+            title: "Pelanggan Dihapus",
+            description: `Pelanggan "${customerToDelete.name}" telah berhasil dihapus.`,
+        });
+
+        setDeleteDialogOpen(false);
+        setCustomerToDelete(null);
     }
 
 

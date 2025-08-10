@@ -22,8 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/lib/types";
-import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { initialUsers } from "@/lib/users";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username tidak boleh kosong"),
@@ -43,17 +42,16 @@ export default function LoginPage() {
     if (sessionStorage.getItem("isLoggedIn") === "true") {
       router.push("/");
     }
+     const savedName = localStorage.getItem("storeName");
+     const savedLogo = localStorage.getItem("storeLogo");
+     if(savedName) setStoreName(savedName);
+     if(savedLogo) setLogo(savedLogo);
 
-    const settingsQuery = query(collection(db, "settings"));
-    const unsubscribe = onSnapshot(settingsQuery, (snapshot) => {
-        if (!snapshot.empty) {
-            const settingsData = snapshot.docs[0].data();
-            setStoreName(settingsData.storeName || "Toko Cepat");
-            setLogo(settingsData.logo || null);
-        }
-    });
+     // Initialize users if not present
+     if (!localStorage.getItem("app-users")) {
+         localStorage.setItem("app-users", JSON.stringify(initialUsers));
+     }
 
-    return () => unsubscribe();
   }, [router]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -64,51 +62,38 @@ export default function LoginPage() {
     },
   });
 
-  async function onSubmit(data: z.infer<typeof loginSchema>) {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("username", "==", data.username), where("password", "==", data.password));
+  function onSubmit(data: z.infer<typeof loginSchema>) {
+    const storedUsers = localStorage.getItem("app-users");
+    const users: User[] = storedUsers ? JSON.parse(storedUsers) : [];
     
-    try {
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
+    const user = users.find(u => u.username === data.username && u.password === data.password);
+
+    if (!user) {
         toast({
           variant: "destructive",
           title: "Login Gagal",
           description: "Username atau password salah.",
         });
         return;
-      }
+    }
 
-      const userDoc = querySnapshot.docs[0];
-      const user = userDoc.data() as User;
-
-      if (user.status === 'inactive') {
+    if (user.status === 'inactive') {
         toast({
           variant: "destructive",
           title: "Login Gagal",
           description: "Akun Anda tidak aktif. Silakan hubungi administrator.",
         });
         return;
-      }
-
-      sessionStorage.setItem("isLoggedIn", "true");
-      sessionStorage.setItem("username", user.username);
-      sessionStorage.setItem("userRole", user.role);
-      toast({
+    }
+    
+    sessionStorage.setItem("isLoggedIn", "true");
+    sessionStorage.setItem("username", user.username);
+    sessionStorage.setItem("userRole", user.role);
+    toast({
         title: "Login Berhasil",
         description: `Selamat datang, ${user.username}!`,
-      });
-      router.push("/");
-
-    } catch (error) {
-       console.error("Error during login: ", error);
-       toast({
-        variant: "destructive",
-        title: "Terjadi Kesalahan",
-        description: "Tidak dapat terhubung ke server. Coba lagi nanti.",
-      });
-    }
+    });
+    router.push("/");
   }
 
   if (!isMounted) {

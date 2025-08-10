@@ -15,8 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 export type Categories = Record<string, string[]>;
 
@@ -45,17 +43,23 @@ export default function SettingsPage() {
     const router = useRouter();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const SETTINGS_DOC_ID = "appSettings"; // Using a single document for all settings
 
-    const saveSettingsToFirestore = React.useCallback(async (settings: any) => {
-        try {
-            const settingsRef = doc(db, "settings", SETTINGS_DOC_ID);
-            await setDoc(settingsRef, settings, { merge: true });
-        } catch (error) {
-            console.error("Error saving settings to Firestore:", error);
-            toast({ variant: "destructive", title: "Gagal Menyimpan Pengaturan" });
+    const loadSettings = React.useCallback(() => {
+        const savedName = localStorage.getItem("storeName");
+        const savedAddress = localStorage.getItem("storeAddress");
+        const savedLogo = localStorage.getItem("storeLogo");
+        const savedCategories = localStorage.getItem("storeCategories");
+        
+        if (savedName) setStoreName(savedName);
+        if (savedAddress) setStoreAddress(savedAddress);
+        if (savedLogo) setLogo(savedLogo);
+        if (savedCategories) {
+            setCategories(JSON.parse(savedCategories));
+        } else {
+            localStorage.setItem("storeCategories", JSON.stringify(defaultCategories));
+            setCategories(defaultCategories);
         }
-    }, [toast]);
+    }, []);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -63,83 +67,49 @@ export default function SettingsPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
-            const settingsRef = doc(db, "settings", SETTINGS_DOC_ID);
-            const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setStoreName(data.storeName || "Toko Cepat");
-                    setStoreAddress(data.storeAddress || "");
-                    setLogo(data.logo || null);
-                    setCategories(data.categories || defaultCategories);
-                } else {
-                    // If no settings exist, create with defaults
-                    saveSettingsToFirestore({ 
-                        storeName: "Toko Cepat", 
-                        storeAddress: "Jl. Jendral Sudirman No. 123, Jakarta", 
-                        logo: null, 
-                        categories: defaultCategories 
-                    });
-                }
-            });
-            return () => unsubscribe();
+            loadSettings();
+
+            window.addEventListener('storage', loadSettings);
+            return () => {
+                window.removeEventListener('storage', loadSettings);
+            };
         }
-    }, [router, saveSettingsToFirestore]);
+    }, [router, loadSettings]);
 
-    // Debounced saving for text inputs
-    React.useEffect(() => {
-        if (!isMounted) return;
-        const handler = setTimeout(() => {
-            saveSettingsToFirestore({ storeName, storeAddress });
-        }, 1000);
-        return () => clearTimeout(handler);
-    }, [storeName, storeAddress, isMounted, saveSettingsToFirestore]);
+    // Save settings immediately on change
+    const handleStoreNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setStoreName(e.target.value);
+        localStorage.setItem("storeName", e.target.value);
+    };
 
-    // Immediate saving for logo
-    React.useEffect(() => {
-        if (!isMounted) return;
-        saveSettingsToFirestore({ logo });
-    }, [logo, isMounted, saveSettingsToFirestore]);
-
-    // Debounced saving for categories
-    React.useEffect(() => {
-        if (!isMounted || Object.keys(categories).length === 0) return;
-        const handler = setTimeout(() => {
-            saveSettingsToFirestore({ categories });
-        }, 1000);
-        return () => clearTimeout(handler);
-    }, [categories, isMounted, saveSettingsToFirestore]);
-
-
-    if (!isMounted) {
-        return (
-             <div className="flex items-center justify-center min-h-screen bg-background">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Memuat...</span>
-                </div>
-            </div>
-        );
-    }
+    const handleStoreAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setStoreAddress(e.target.value);
+        localStorage.setItem("storeAddress", e.target.value);
+    };
 
     const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
             const file = event.target.files[0];
             const reader = new FileReader();
             reader.onloadend = () => {
-                setLogo(reader.result as string);
+                const result = reader.result as string;
+                setLogo(result);
+                localStorage.setItem("storeLogo", result);
                 toast({ title: "Logo Diperbarui", description: "Logo toko telah berhasil diunggah." });
             };
             reader.readAsDataURL(file);
         }
     }
 
-     const handleAddCategory = () => {
+    const saveCategories = (updatedCategories: Categories) => {
+        setCategories(updatedCategories);
+        localStorage.setItem("storeCategories", JSON.stringify(updatedCategories));
+    }
+
+    const handleAddCategory = () => {
         if (newCategory && !categories[newCategory]) {
             const updatedCategories = { ...categories, [newCategory]: [] };
-            setCategories(updatedCategories);
+            saveCategories(updatedCategories);
             setNewCategory("");
             toast({ title: "Kategori Ditambahkan", description: `"${newCategory}" telah ditambahkan.` });
         } else if (categories[newCategory]) {
@@ -154,7 +124,7 @@ export default function SettingsPage() {
                 ...categories,
                 [category]: [...categories[category], subcatValue]
             };
-            setCategories(updatedCategories);
+            saveCategories(updatedCategories);
             setNewSubcategory(prev => ({ ...prev, [category]: "" }));
             toast({ title: "Subkategori Ditambahkan" });
         }
@@ -162,7 +132,7 @@ export default function SettingsPage() {
 
     const handleDeleteCategory = (categoryToDelete: string) => {
         const { [categoryToDelete]: _, ...remainingCategories } = categories;
-        setCategories(remainingCategories);
+        saveCategories(remainingCategories);
         toast({ variant: "destructive", title: "Kategori Dihapus", description: `"${categoryToDelete}" telah dihapus.` });
     };
 
@@ -172,10 +142,23 @@ export default function SettingsPage() {
             ...categories,
             [category]: updatedSubcategories
         };
-        setCategories(updatedCategories);
+        saveCategories(updatedCategories);
         toast({ variant: "destructive", title: "Subkategori Dihapus" });
     };
 
+    if (!isMounted) {
+        return (
+             <div className="flex items-center justify-center min-h-screen bg-background">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Memuat...</span>
+                </div>
+            </div>
+        );
+    }
     
   return (
     <AdminLayout>
@@ -188,11 +171,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
                 <Label htmlFor="store-name">Nama Toko</Label>
-                <Input id="store-name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
+                <Input id="store-name" value={storeName} onChange={handleStoreNameChange} />
             </div>
              <div className="space-y-2">
                 <Label htmlFor="store-address">Alamat Toko</Label>
-                <Textarea id="store-address" value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} />
+                <Textarea id="store-address" value={storeAddress} onChange={handleStoreAddressChange} />
             </div>
              <div className="space-y-2">
                 <Label>Logo Toko</Label>
@@ -204,12 +187,10 @@ export default function SettingsPage() {
                             <span className="text-xs text-muted-foreground text-center">Pratinjau Logo</span>
                         )}
                     </div>
-                     <Input id="picture" type="file" className="hidden" onChange={handleLogoChange} accept="image/*"/>
-                    <Button variant="outline" asChild>
-                        <label htmlFor="picture">
-                            <Upload className="mr-2 h-4 w-4" />
-                            Unggah Logo
-                        </label>
+                     <Input id="picture" type="file" className="hidden" ref={fileInputRef} onChange={handleLogoChange} accept="image/*"/>
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Unggah Logo
                     </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Rekomendasi ukuran: 200x200px. Format: JPG, PNG.</p>

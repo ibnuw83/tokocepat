@@ -24,8 +24,6 @@ import type { InventoryItem } from "@/app/admin/inventory/page";
 import type { Customer } from "@/app/admin/customers/page";
 import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
-import { collection, onSnapshot, addDoc, doc, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 
 const itemSchema = z.object({
@@ -60,34 +58,27 @@ export default function PosPage() {
     },
   });
 
+  const loadData = React.useCallback(() => {
+    const storedInventory = localStorage.getItem("inventoryItems");
+    if (storedInventory) setInventory(JSON.parse(storedInventory));
+
+    const storedCustomers = localStorage.getItem("customers");
+    if (storedCustomers) setCustomers(JSON.parse(storedCustomers));
+  }, []);
+
   React.useEffect(() => {
     const isLoggedIn = sessionStorage.getItem("isLoggedIn");
     if (isLoggedIn !== "true") {
       router.push("/login");
     } else {
       setIsMounted(true);
+      loadData();
+      
+      // Listen to storage changes to keep data fresh
+      window.addEventListener('storage', loadData);
+      return () => window.removeEventListener('storage', loadData);
     }
-  }, [router]);
-
-  // Load data from Firestore
-  React.useEffect(() => {
-    if (!isMounted) return;
-
-    const unsubInventory = onSnapshot(collection(db, "inventory"), (snapshot) => {
-        const inventoryData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
-        setInventory(inventoryData);
-    });
-
-    const unsubCustomers = onSnapshot(collection(db, "customers"), (snapshot) => {
-        const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-        setCustomers(customersData);
-    });
-
-    return () => {
-        unsubInventory();
-        unsubCustomers();
-    }
-  }, [isMounted]);
+  }, [router, loadData]);
 
   // Sync current cart with localStorage
   React.useEffect(() => {
@@ -241,11 +232,13 @@ export default function PosPage() {
     });
   }
 
-  async function finalizeTransaction() {
-    const batch = writeBatch(db);
-
+  function finalizeTransaction() {
     // 1. Save transaction to history
-    const newTransaction: Omit<Transaction, 'id'> = {
+    const storedTransactions = localStorage.getItem("transactions");
+    const transactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+    
+    const newTransaction: Transaction = {
+      id: `TRX-${Date.now()}`,
       date: new Date().toISOString(),
       items: items.reduce((sum, item) => sum + item.quantity, 0),
       total: total,
@@ -254,35 +247,30 @@ export default function PosPage() {
       customerName: selectedCustomer?.name || "Pelanggan Umum",
       details: items,
     };
-    const transactionRef = doc(collection(db, "transactions"));
-    batch.set(transactionRef, newTransaction);
+    
+    transactions.push(newTransaction);
+    localStorage.setItem("transactions", JSON.stringify(transactions));
     
     // 2. Update stock in inventory
+    const updatedInventory = [...inventory];
     items.forEach(cartItem => {
-        const inventoryItem = inventory.find(invItem => invItem.id === cartItem.id);
-        if (inventoryItem) {
-            const itemRef = doc(db, "inventory", cartItem.id);
-            const newStock = inventoryItem.stock - cartItem.quantity;
-            batch.update(itemRef, { stock: newStock });
+        const itemIndex = updatedInventory.findIndex(invItem => invItem.id === cartItem.id);
+        if (itemIndex > -1) {
+            updatedInventory[itemIndex].stock -= cartItem.quantity;
         }
     });
+    localStorage.setItem("inventoryItems", JSON.stringify(updatedInventory));
+    
+    // Trigger storage event to update other components
+    window.dispatchEvent(new Event("storage"));
 
-    try {
-        await batch.commit();
-        handleNewTransaction();
-        setReceiptOpen(false);
-        toast({
-            title: "Transaksi Selesai",
-            description: "Stok telah diperbarui dan transaksi baru siap dimulai.",
-        });
-    } catch (error) {
-        console.error("Transaction failed: ", error);
-        toast({
-            variant: "destructive",
-            title: "Transaksi Gagal",
-            description: "Gagal menyimpan transaksi, silakan coba lagi.",
-        });
-    }
+    // 3. Clear cart and UI for next transaction
+    handleNewTransaction();
+    setReceiptOpen(false); // Close receipt dialog
+     toast({
+        title: "Transaksi Selesai",
+        description: "Stok telah diperbarui dan transaksi baru siap dimulai.",
+    });
   }
   
   function handleBarcodeScanned(decodedText: string) {
