@@ -15,7 +15,6 @@ const allMenuItems = [
   { href: "/admin/financials", icon: BookCopy, label: "Laporan Keuangan" },
   { href: "/admin/reports", icon: FileText, label: "Laporan Transaksi" },
   { href: "/admin/customers", icon: Users, label: "Data Konsumen" },
-  { href: "/admin/users", icon: Users, label: "Manajemen Pengguna" },
   { href: "/admin/settings", icon: Settings, label: "Pengaturan Toko" },
 ];
 
