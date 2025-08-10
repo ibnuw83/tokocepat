@@ -3,7 +3,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -14,7 +13,12 @@ export default function DashboardPage() {
     if (isLoggedIn !== "true") {
       router.push("/login");
     } else {
-      router.push("/transactions");
+      const userRole = sessionStorage.getItem("userRole");
+      if (userRole === 'Administrator') {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/transactions");
+      }
     }
   }, [router]);
 
