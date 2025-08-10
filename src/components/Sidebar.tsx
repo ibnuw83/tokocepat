@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings } from "lucide-react";
+import Image from "next/image";
 
 const menuItems = [
   { href: "/transactions", icon: CreditCard, label: "Kasir" },
@@ -20,16 +21,41 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [storeName, setStoreName] = React.useState("Toko Cepat");
+  const [logo, setLogo] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+     // This function will be called whenever the storage changes in another tab
+    const handleStorageChange = () => {
+      const savedName = localStorage.getItem("storeName");
+      const savedLogo = localStorage.getItem("storeLogo");
+      if (savedName) setStoreName(savedName);
+      if (savedLogo) setLogo(savedLogo);
+    };
+
+    // Initial load
+    handleStorageChange();
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   return (
     <aside className="w-64 bg-card border-r flex-col hidden md:flex">
        <div className="py-4 px-4 md:px-8 border-b h-[73px] flex items-center">
          <div className="flex items-center gap-3">
             <div className="p-2 bg-primary rounded-lg">
-              <Box className="h-6 w-6 text-primary-foreground" />
+              {logo ? (
+                  <Image src={logo} alt="Logo" width={24} height={24} className="object-contain" />
+                ) : (
+                  <Box className="h-6 w-6 text-primary-foreground" />
+                )}
             </div>
             <h1 className="text-2xl font-headline font-bold text-foreground">
-              Toko Cepat
+              {storeName}
             </h1>
           </div>
       </div>

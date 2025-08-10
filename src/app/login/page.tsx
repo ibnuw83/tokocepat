@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Box, LogIn } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isMounted, setIsMounted] = React.useState(false);
+  const [storeName, setStoreName] = React.useState("Toko Cepat");
+  const [logo, setLogo] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -37,6 +40,12 @@ export default function LoginPage() {
     if (sessionStorage.getItem("isLoggedIn") === "true") {
       router.push("/");
     }
+     // Load saved settings from localStorage
+    const savedName = localStorage.getItem("storeName");
+    const savedLogo = localStorage.getItem("storeLogo");
+    if (savedName) setStoreName(savedName);
+    if (savedLogo) setLogo(savedLogo);
+
   }, [router]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -76,10 +85,14 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
              <div className="p-3 bg-primary rounded-lg inline-block">
-                <Box className="h-7 w-7 text-primary-foreground" />
+                {logo ? (
+                  <Image src={logo} alt="Logo" width={28} height={28} className="object-contain" />
+                ) : (
+                  <Box className="h-7 w-7 text-primary-foreground" />
+                )}
              </div>
           </div>
-          <CardTitle className="text-3xl font-headline">Toko Cepat</CardTitle>
+          <CardTitle className="text-3xl font-headline">{storeName}</CardTitle>
           <CardDescription>Silakan login untuk melanjutkan</CardDescription>
         </CardHeader>
         <CardContent>
