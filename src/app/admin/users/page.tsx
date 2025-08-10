@@ -8,18 +8,30 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+type User = {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  status: 'Aktif' | 'Nonaktif';
+};
 
 // Mock data for users
-const users = [
-  { id: "USR001", name: "Admin Utama", username: "admin", role: "Administrator" },
-  { id: "USR002", name: "Kasir Pagi", username: "kasir01", role: "Kasir" },
-  { id: "USR003", name: "Kasir Malam", username: "kasir02", role: "Kasir" },
+const initialUsers: User[] = [
+  { id: "USR001", name: "Admin Utama", username: "admin", role: "Administrator", status: "Aktif" },
+  { id: "USR002", name: "Kasir Pagi", username: "kasir01", role: "Kasir", status: "Aktif" },
+  { id: "USR003", name: "Kasir Malam", username: "kasir02", role: "Kasir", status: "Nonaktif" },
 ];
 
 export default function UsersPage() {
     const [isMounted, setIsMounted] = React.useState(false);
+    const [users, setUsers] = React.useState<User[]>(initialUsers);
     const router = useRouter();
+    const { toast } = useToast();
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -29,6 +41,22 @@ export default function UsersPage() {
             setIsMounted(true);
         }
     }, [router]);
+
+    const handleToggleStatus = (userId: string) => {
+        setUsers(prevUsers => {
+            return prevUsers.map(user => {
+                if (user.id === userId) {
+                    const newStatus = user.status === 'Aktif' ? 'Nonaktif' : 'Aktif';
+                    toast({
+                        title: "Status Pengguna Diperbarui",
+                        description: `Pengguna ${user.name} sekarang ${newStatus}.`
+                    })
+                    return { ...user, status: newStatus };
+                }
+                return user;
+            });
+        });
+    }
     
     if (!isMounted) {
         return (
@@ -67,6 +95,7 @@ export default function UsersPage() {
                     <TableHead>Nama Lengkap</TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead>Peran</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -76,6 +105,11 @@ export default function UsersPage() {
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.username}</TableCell>
                         <TableCell>{user.role}</TableCell>
+                        <TableCell>
+                            <Badge variant={user.status === 'Aktif' ? 'secondary' : 'destructive'}>
+                                {user.status}
+                            </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                            <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -86,7 +120,13 @@ export default function UsersPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem>Edit</DropdownMenuItem>
-                                    <DropdownMenuItem>Hapus</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleToggleStatus(user.id)}>
+                                        {user.status === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                        Hapus
+                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>
