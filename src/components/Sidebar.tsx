@@ -62,13 +62,11 @@ export function Sidebar() {
     <aside className="w-64 bg-card border-r flex-col hidden md:flex">
        <div className="py-4 px-4 md:px-8 border-b h-[73px] flex items-center">
          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              {logo ? (
-                  <Image src={logo} alt="Logo" width={24} height={24} className="object-contain" />
-                ) : (
-                  <Box className="h-6 w-6 text-primary-foreground" />
-                )}
-            </div>
+            {logo ? (
+                <Image src={logo} alt="Logo" width={32} height={32} className="object-contain" />
+              ) : (
+                <Box className="h-8 w-8 text-primary" />
+              )}
             <h1 className="text-2xl font-headline font-bold text-foreground">
               {storeName}
             </h1>

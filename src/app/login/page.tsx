@@ -95,14 +95,12 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="flex justify-center items-center gap-3 mb-2">
-             <div className="p-3 bg-primary rounded-lg inline-block">
-                {logo ? (
-                  <Image src={logo} alt="Logo" width={28} height={28} className="object-contain" />
-                ) : (
-                  <Box className="h-7 w-7 text-primary-foreground" />
-                )}
-             </div>
+          <div className="flex justify-center items-center mb-4">
+            {logo ? (
+              <Image src={logo} alt="Logo" width={40} height={40} className="object-contain" />
+            ) : (
+              <Box className="h-10 w-10 text-primary" />
+            )}
           </div>
           <CardTitle className="text-3xl font-headline">{storeName}</CardTitle>
           <CardDescription>Silakan login untuk melanjutkan</CardDescription>
