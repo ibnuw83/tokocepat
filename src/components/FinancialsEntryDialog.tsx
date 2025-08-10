@@ -19,12 +19,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
+import type { FinancialEntry } from '@/app/admin/financials/page';
+
 
 interface FinancialsEntryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'capital' | 'expense';
   onSave: (description: string, amount: number) => void;
+  existingData?: FinancialEntry | null;
 }
 
 const formSchema = z.object({
@@ -32,7 +35,7 @@ const formSchema = z.object({
   amount: z.coerce.number().min(1, { message: "Jumlah minimal 1." }),
 });
 
-export function FinancialsEntryDialog({ isOpen, onClose, type, onSave }: FinancialsEntryDialogProps) {
+export function FinancialsEntryDialog({ isOpen, onClose, type, onSave, existingData }: FinancialsEntryDialogProps) {
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,27 +45,35 @@ export function FinancialsEntryDialog({ isOpen, onClose, type, onSave }: Financi
     },
   });
 
-  const dialogTitle = type === 'capital' ? 'Tambah Catatan Modal' : 'Tambah Catatan Pengeluaran';
-  const dialogDescription = `Formulir untuk mencatat ${type === 'capital' ? 'pemasukan modal' : 'pengeluaran baru'}.`;
+  const isEditMode = !!existingData;
+  const dialogTitle = isEditMode
+    ? (type === 'capital' ? 'Edit Catatan Modal' : 'Edit Catatan Pengeluaran')
+    : (type === 'capital' ? 'Tambah Catatan Modal' : 'Tambah Catatan Pengeluaran');
+  const dialogDescription = `Formulir untuk ${isEditMode ? 'memperbarui' : 'mencatat'} ${type === 'capital' ? 'pemasukan modal' : 'pengeluaran baru'}.`;
+
 
   function handleSubmit(values: z.infer<typeof formSchema>) {
     onSave(values.description, values.amount);
-    toast({
-        title: "Data Tersimpan",
-        description: `Catatan baru telah berhasil ditambahkan.`,
-    });
+    // Toast is handled in the parent component now
     form.reset();
     onClose();
   }
 
   React.useEffect(() => {
     if (isOpen) {
-      form.reset({
-        description: "",
-        amount: 0,
-      });
+      if (existingData) {
+        form.reset({
+            description: existingData.description,
+            amount: existingData.amount,
+        });
+      } else {
+         form.reset({
+            description: "",
+            amount: 0,
+         });
+      }
     }
-  }, [isOpen, form]);
+  }, [isOpen, existingData, form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -103,7 +114,7 @@ export function FinancialsEntryDialog({ isOpen, onClose, type, onSave }: Financi
                     <DialogClose asChild>
                         <Button type="button" variant="secondary">Batal</Button>
                     </DialogClose>
-                    <Button type="submit">Simpan</Button>
+                    <Button type="submit">{isEditMode ? "Simpan Perubahan" : "Simpan"}</Button>
                 </DialogFooter>
             </form>
         </Form>
@@ -111,3 +122,5 @@ export function FinancialsEntryDialog({ isOpen, onClose, type, onSave }: Financi
     </Dialog>
   );
 }
+
+    
