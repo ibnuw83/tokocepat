@@ -30,7 +30,47 @@ export default function Home() {
   const [discount, setDiscount] = React.useState(0);
   const [discountType, setDiscountType] = React.useState<"percentage" | "fixed">("fixed");
   const [isReceiptOpen, setReceiptOpen] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    try {
+      const storedItems = localStorage.getItem("pos-items");
+      if (storedItems) {
+        setItems(JSON.parse(storedItems));
+      }
+      const storedDiscount = localStorage.getItem("pos-discount");
+      if (storedDiscount) {
+        setDiscount(JSON.parse(storedDiscount));
+      }
+      const storedDiscountType = localStorage.getItem("pos-discount-type");
+      if (storedDiscountType) {
+        setDiscountType(JSON.parse(storedDiscountType));
+      }
+    } catch (error) {
+      console.error("Failed to load data from localStorage", error);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem("pos-items", JSON.stringify(items));
+    }
+  }, [items, isMounted]);
+
+  React.useEffect(() => {
+     if (isMounted) {
+      localStorage.setItem("pos-discount", JSON.stringify(discount));
+     }
+  }, [discount, isMounted]);
+
+  React.useEffect(() => {
+     if (isMounted) {
+      localStorage.setItem("pos-discount-type", JSON.stringify(discountType));
+     }
+  }, [discountType, isMounted]);
+
 
   const form = useForm<z.infer<typeof itemSchema>>({
     resolver: zodResolver(itemSchema),
@@ -104,6 +144,10 @@ export default function Home() {
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+  }
+
+  if (!isMounted) {
+    return null; 
   }
 
   return (
