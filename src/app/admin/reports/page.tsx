@@ -16,6 +16,8 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const ALL_CASHIERS_VALUE = "ALL_CASHIERS";
+
 export default function ReportsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [transactions, setTransactions] = React.useState<Transaction[]>([]);
@@ -123,6 +125,14 @@ export default function ReportsPage() {
         }
     }
 
+    const handleOperatorChange = (value: string) => {
+        if (value === ALL_CASHIERS_VALUE) {
+            setSelectedOperator("");
+        } else {
+            setSelectedOperator(value);
+        }
+    }
+
 
   return (
     <AdminLayout>
@@ -154,12 +164,12 @@ export default function ReportsPage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Select value={selectedOperator} onValueChange={setSelectedOperator}>
+                    <Select value={selectedOperator || ALL_CASHIERS_VALUE} onValueChange={handleOperatorChange}>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Semua Kasir" />
                         </SelectTrigger>
                         <SelectContent>
-                             <SelectItem value="">Semua Kasir</SelectItem>
+                             <SelectItem value={ALL_CASHIERS_VALUE}>Semua Kasir</SelectItem>
                             {uniqueOperators.map(op => <SelectItem key={op} value={op}>{op}</SelectItem>)}
                         </SelectContent>
                     </Select>
