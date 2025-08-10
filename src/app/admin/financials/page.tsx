@@ -233,15 +233,13 @@ export default function FinancialsPage() {
         <div className="grid md:grid-cols-2 gap-8">
             <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>Catatan Modal</CardTitle>
-                        <CardDescription>Riwayat penambahan modal.</CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('capital')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Modal</Button>
-                </div>
+                <CardTitle>Catatan Modal</CardTitle>
+                <CardDescription>Riwayat penambahan modal.</CardDescription>
             </CardHeader>
             <CardContent>
+                <div className="mb-4">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('capital')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Modal</Button>
+                </div>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -274,15 +272,13 @@ export default function FinancialsPage() {
             </Card>
             <Card>
             <CardHeader>
-                 <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>Catatan Pengeluaran</CardTitle>
-                        <CardDescription>Riwayat pengeluaran toko.</CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('expense')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Pengeluaran</Button>
-                </div>
+                <CardTitle>Catatan Pengeluaran</CardTitle>
+                <CardDescription>Riwayat pengeluaran toko.</CardDescription>
             </CardHeader>
             <CardContent>
+                <div className="mb-4">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog('expense')}><PlusCircle className="mr-2 h-4 w-4"/> Tambah Pengeluaran</Button>
+                </div>
                  <Table>
                     <TableHeader>
                         <TableRow>
