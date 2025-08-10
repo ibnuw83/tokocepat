@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditCard, FileText, Box, Package, BookCopy, Users, Building, Settings, LayoutDashboard, UserCog } from "lucide-react";
 import Image from "next/image";
+import { collection, query, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const allMenuItems = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -32,15 +34,15 @@ export function Sidebar() {
   const [menuItems, setMenuItems] = React.useState(allMenuItems);
 
   React.useEffect(() => {
-     // This function will be called whenever the storage changes in another tab
-    const handleStorageChange = () => {
-      const savedName = localStorage.getItem("storeName");
-      const savedLogo = localStorage.getItem("storeLogo");
-      if (savedName) setStoreName(savedName);
-      if (savedLogo) setLogo(savedLogo);
-    };
-    
-    // Determine user role and set menu items
+    const settingsQuery = query(collection(db, "settings"));
+    const unsubscribe = onSnapshot(settingsQuery, (snapshot) => {
+        if (!snapshot.empty) {
+            const settingsData = snapshot.docs[0].data();
+            setStoreName(settingsData.storeName || "Toko Cepat");
+            setLogo(settingsData.logo || null);
+        }
+    });
+
     const userRole = sessionStorage.getItem("userRole");
     if (userRole === 'Kasir') {
         setMenuItems(cashierMenuItems);
@@ -48,14 +50,7 @@ export function Sidebar() {
         setMenuItems(allMenuItems);
     }
 
-    // Initial load
-    handleStorageChange();
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    return () => unsubscribe();
   }, []);
 
   return (

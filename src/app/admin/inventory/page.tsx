@@ -27,17 +27,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge";
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
-// Mock data for inventory
-const initialInventoryItems = [
-  { id: "ITEM001", barcode: "8992761134037", name: "Kopi Susu", category: "Minuman", subcategory: "Kopi", stock: 50, costPrice: 12000, price: 18000, lowStockThreshold: 10 },
-  { id: "ITEM002", barcode: "8999909090123", name: "Roti Coklat", category: "Makanan", subcategory: "Kue & Roti", stock: 8, costPrice: 7000, price: 10000, lowStockThreshold: 5 },
-  { id: "ITEM003", barcode: "8991234567890", name: "Teh Manis", category: "Minuman", subcategory: "Teh", stock: 80, costPrice: 5000, price: 8000, lowStockThreshold: 20 },
-  { id: "ITEM004", barcode: "8990987654321", name: "Donat Gula", category: "Makanan", subcategory: "Kue & Roti", stock: 42, costPrice: 4000, price: 7000, lowStockThreshold: 10 },
-];
-
-export type InventoryItem = typeof initialInventoryItems[0];
+export type InventoryItem = {
+    id: string;
+    barcode: string;
+    name: string;
+    category: string;
+    subcategory: string;
+    stock: number;
+    costPrice: number;
+    price: number;
+    lowStockThreshold: number;
+};
 
 export default function InventoryPage() {
     const [isMounted, setIsMounted] = React.useState(false);
@@ -54,25 +58,7 @@ export default function InventoryPage() {
     const { toast } = useToast();
     const router = useRouter();
 
-    // This ref will hold the function to update the form field in AddItemDialog
     const setBarcodeInDialogRef = React.useRef<(barcode: string) => void>(() => {});
-
-     const saveInventoryToStorage = React.useCallback((items: InventoryItem[]) => {
-        localStorage.setItem("inventoryItems", JSON.stringify(items));
-        // Dispatch a storage event to notify other tabs/components
-        window.dispatchEvent(new Event('storage'));
-    }, []);
-
-    const loadInventoryFromStorage = React.useCallback(() => {
-        const savedInventory = localStorage.getItem("inventoryItems");
-        if (savedInventory) {
-            setInventoryItems(JSON.parse(savedInventory));
-        } else {
-            // If nothing is in storage, use initial mock data and save it
-            setInventoryItems(initialInventoryItems);
-            saveInventoryToStorage(initialInventoryItems);
-        }
-    }, [saveInventoryToStorage]);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -80,15 +66,13 @@ export default function InventoryPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
-            loadInventoryFromStorage();
-
-            // Listen for storage changes from other tabs
-            window.addEventListener('storage', loadInventoryFromStorage);
-            return () => {
-                window.removeEventListener('storage', loadInventoryFromStorage);
-            };
+            const unsubscribe = onSnapshot(collection(db, "inventory"), (snapshot) => {
+                const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+                setInventoryItems(itemsData);
+            });
+            return () => unsubscribe();
         }
-    }, [router, loadInventoryFromStorage]);
+    }, [router]);
     
     if (!isMounted) {
         return (
@@ -117,26 +101,29 @@ export default function InventoryPage() {
         setAdjustmentDialogOpen(true);
     }
 
-    const handleStockAdjustment = (itemId: string, quantity: number, notes: string) => {
-        const updatedItems = inventoryItems.map(item => {
-            if (item.id === itemId) {
-                const newStock = adjustmentType === 'in' ? item.stock + quantity : item.stock - quantity;
-                return { ...item, stock: newStock < 0 ? 0 : newStock };
-            }
-            return item;
-        });
-        setInventoryItems(updatedItems);
-        saveInventoryToStorage(updatedItems);
+    const handleStockAdjustment = async (itemId: string, quantity: number, notes: string) => {
+        const itemRef = doc(db, "inventory", itemId);
+        const item = inventoryItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const newStock = adjustmentType === 'in' ? item.stock + quantity : item.stock - quantity;
+        try {
+            await updateDoc(itemRef, { stock: newStock < 0 ? 0 : newStock });
+            toast({ title: "Stok Diperbarui" });
+        } catch (error) {
+            console.error("Error adjusting stock: ", error);
+            toast({ variant: "destructive", title: "Gagal Memperbarui Stok" });
+        }
     }
 
-    const handleAddNewItem = (values: Omit<InventoryItem, 'id'>) => {
-        const newItem: InventoryItem = {
-            id: `ITEM${Date.now()}`,
-            ...values
-        };
-        const updatedItems = [...inventoryItems, newItem];
-        setInventoryItems(updatedItems);
-        saveInventoryToStorage(updatedItems);
+    const handleAddNewItem = async (values: Omit<InventoryItem, 'id'>) => {
+        try {
+            await addDoc(collection(db, "inventory"), values);
+            toast({ title: "Barang Baru Ditambahkan" });
+        } catch (error) {
+            console.error("Error adding item: ", error);
+            toast({ variant: "destructive", title: "Gagal Menambahkan Barang" });
+        }
     };
     
     const handleEditItem = (item: InventoryItem) => {
@@ -149,28 +136,36 @@ export default function InventoryPage() {
         setDeleteDialogOpen(true);
     };
 
-    const handleDeleteItem = () => {
+    const handleDeleteItem = async () => {
         if (!itemToDelete) return;
-        const updatedItems = inventoryItems.filter(item => item.id !== itemToDelete.id);
-        setInventoryItems(updatedItems);
-        saveInventoryToStorage(updatedItems);
-        toast({
-            variant: "destructive",
-            title: "Barang Dihapus",
-            description: `Barang "${itemToDelete.name}" telah berhasil dihapus.`,
-        });
-        setDeleteDialogOpen(false);
-        setItemToDelete(null);
+        try {
+            await deleteDoc(doc(db, "inventory", itemToDelete.id));
+            toast({
+                variant: "destructive",
+                title: "Barang Dihapus",
+                description: `Barang "${itemToDelete.name}" telah berhasil dihapus.`,
+            });
+        } catch (error) {
+            console.error("Error deleting item: ", error);
+            toast({ variant: "destructive", title: "Gagal Menghapus" });
+        } finally {
+            setDeleteDialogOpen(false);
+            setItemToDelete(null);
+        }
     };
 
-
-    const handleUpdateItem = (updatedItem: InventoryItem) => {
-        const updatedItems = inventoryItems.map(item => item.id === updatedItem.id ? updatedItem : item);
-        setInventoryItems(updatedItems);
-        saveInventoryToStorage(updatedItems);
-        setEditingItem(null);
+    const handleUpdateItem = async (updatedItem: InventoryItem) => {
+        try {
+            const itemRef = doc(db, "inventory", updatedItem.id);
+            const { id, ...dataToUpdate } = updatedItem;
+            await updateDoc(itemRef, dataToUpdate);
+            toast({ title: "Barang Diperbarui" });
+            setEditingItem(null);
+        } catch (error) {
+            console.error("Error updating item: ", error);
+            toast({ variant: "destructive", title: "Gagal Memperbarui" });
+        }
     };
-
 
     function handleBarcodeScanned(decodedText: string) {
         toast({
@@ -341,5 +336,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    

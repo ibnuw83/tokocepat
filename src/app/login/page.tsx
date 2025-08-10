@@ -22,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@/lib/types";
-import { initialUsers } from "@/lib/users";
+import { collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username tidak boleh kosong"),
@@ -36,29 +37,23 @@ export default function LoginPage() {
   const [isMounted, setIsMounted] = React.useState(false);
   const [storeName, setStoreName] = React.useState("Toko Cepat");
   const [logo, setLogo] = React.useState<string | null>(null);
-  const [users, setUsers] = React.useState<User[]>([]);
 
   React.useEffect(() => {
     setIsMounted(true);
-    // If user is already logged in, redirect to home
     if (sessionStorage.getItem("isLoggedIn") === "true") {
       router.push("/");
     }
-     // Load saved settings from localStorage
-    const savedName = localStorage.getItem("storeName");
-    const savedLogo = localStorage.getItem("storeLogo");
-    if (savedName) setStoreName(savedName);
-    if (savedLogo) setLogo(savedLogo);
 
-    // Load users from storage or set initial ones
-    const savedUsers = localStorage.getItem("app-users");
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      setUsers(initialUsers);
-      localStorage.setItem("app-users", JSON.stringify(initialUsers));
-    }
+    const settingsQuery = query(collection(db, "settings"));
+    const unsubscribe = onSnapshot(settingsQuery, (snapshot) => {
+        if (!snapshot.empty) {
+            const settingsData = snapshot.docs[0].data();
+            setStoreName(settingsData.storeName || "Toko Cepat");
+            setLogo(settingsData.logo || null);
+        }
+    });
 
+    return () => unsubscribe();
   }, [router]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -69,12 +64,25 @@ export default function LoginPage() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof loginSchema>) {
-    const user = users.find(
-        (u) => u.username === data.username && u.password === data.password
-    );
+  async function onSubmit(data: z.infer<typeof loginSchema>) {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("username", "==", data.username), where("password", "==", data.password));
+    
+    try {
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        toast({
+          variant: "destructive",
+          title: "Login Gagal",
+          description: "Username atau password salah.",
+        });
+        return;
+      }
 
-    if (user) {
+      const userDoc = querySnapshot.docs[0];
+      const user = userDoc.data() as User;
+
       if (user.status === 'inactive') {
         toast({
           variant: "destructive",
@@ -92,11 +100,13 @@ export default function LoginPage() {
         description: `Selamat datang, ${user.username}!`,
       });
       router.push("/");
-    } else {
-      toast({
+
+    } catch (error) {
+       console.error("Error during login: ", error);
+       toast({
         variant: "destructive",
-        title: "Login Gagal",
-        description: "Username atau password salah.",
+        title: "Terjadi Kesalahan",
+        description: "Tidak dapat terhubung ke server. Coba lagi nanti.",
       });
     }
   }

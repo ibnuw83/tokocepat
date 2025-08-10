@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
+import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export type Categories = Record<string, string[]>;
 
@@ -32,7 +33,6 @@ const defaultCategories: Categories = {
     "Hobi & Koleksi": ["Alat Musik", "Koleksi Action Figure", "Alat Seni & Kerajinan", "Produk Gaming", "Kamera & Fotografi"],
 };
 
-
 export default function SettingsPage() {
     const [isMounted, setIsMounted] = React.useState(false);
     const [storeName, setStoreName] = React.useState("Toko Cepat");
@@ -41,45 +41,21 @@ export default function SettingsPage() {
     const [categories, setCategories] = React.useState<Categories>({});
     const [newCategory, setNewCategory] = React.useState("");
     const [newSubcategory, setNewSubcategory] = React.useState<{ [key: string]: string }>({});
-
+    
     const router = useRouter();
     const { toast } = useToast();
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    
-    // Function to save all settings
-    const saveSettings = React.useCallback((updatedSettings: {
-        name?: string,
-        address?: string,
-        logo?: string | null,
-        categories?: Categories
-    }) => {
-        try {
-            const currentName = updatedSettings.name ?? storeName;
-            const currentAddress = updatedSettings.address ?? storeAddress;
-            const currentLogo = updatedSettings.logo ?? logo;
-            const currentCategories = updatedSettings.categories ?? categories;
+    const SETTINGS_DOC_ID = "appSettings"; // Using a single document for all settings
 
-            localStorage.setItem("storeName", currentName);
-            localStorage.setItem("storeAddress", currentAddress);
-            if (currentLogo) {
-                localStorage.setItem("storeLogo", currentLogo);
-            } else {
-                localStorage.removeItem("storeLogo");
-            }
-            localStorage.setItem("storeCategories", JSON.stringify(currentCategories));
-            
-            // Dispatch a storage event to notify other components like Sidebar
-            window.dispatchEvent(new Event('storage'));
-            
+    const saveSettingsToFirestore = React.useCallback(async (settings: any) => {
+        try {
+            const settingsRef = doc(db, "settings", SETTINGS_DOC_ID);
+            await setDoc(settingsRef, settings, { merge: true });
         } catch (error) {
-            console.error("Failed to save settings to localStorage", error);
-            toast({
-                variant: "destructive",
-                title: "Gagal Menyimpan",
-                description: "Terjadi kesalahan saat menyimpan pengaturan.",
-            });
+            console.error("Error saving settings to Firestore:", error);
+            toast({ variant: "destructive", title: "Gagal Menyimpan Pengaturan" });
         }
-    }, [storeName, storeAddress, logo, categories, toast]);
+    }, [toast]);
 
     React.useEffect(() => {
         const isLoggedIn = sessionStorage.getItem("isLoggedIn");
@@ -87,44 +63,53 @@ export default function SettingsPage() {
             router.push("/login");
         } else {
             setIsMounted(true);
-            // Load saved settings from localStorage
-            const savedName = localStorage.getItem("storeName");
-            const savedAddress = localStorage.getItem("storeAddress");
-            const savedLogo = localStorage.getItem("storeLogo");
-            const savedCategories = localStorage.getItem("storeCategories");
-
-            if (savedName) setStoreName(savedName);
-            if (savedAddress) setStoreAddress(savedAddress);
-            if (savedLogo) setLogo(savedLogo);
-            if (savedCategories) {
-                setCategories(JSON.parse(savedCategories));
-            } else {
-                // If no categories are saved, save the default ones and set state
-                 setCategories(defaultCategories);
-                 localStorage.setItem("storeCategories", JSON.stringify(defaultCategories));
-            }
+            const settingsRef = doc(db, "settings", SETTINGS_DOC_ID);
+            const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setStoreName(data.storeName || "Toko Cepat");
+                    setStoreAddress(data.storeAddress || "");
+                    setLogo(data.logo || null);
+                    setCategories(data.categories || defaultCategories);
+                } else {
+                    // If no settings exist, create with defaults
+                    saveSettingsToFirestore({ 
+                        storeName: "Toko Cepat", 
+                        storeAddress: "Jl. Jendral Sudirman No. 123, Jakarta", 
+                        logo: null, 
+                        categories: defaultCategories 
+                    });
+                }
+            });
+            return () => unsubscribe();
         }
-    }, [router]);
+    }, [router, saveSettingsToFirestore]);
 
-     // --- Auto-saving useEffects ---
+    // Debounced saving for text inputs
     React.useEffect(() => {
-        if(isMounted) {
-            const debounceTimer = setTimeout(() => {
-                 saveSettings({ name: storeName, address: storeAddress, logo: logo });
-            }, 500); // Debounce to avoid too many writes
-            return () => clearTimeout(debounceTimer);
-        }
-    }, [storeName, storeAddress, logo, isMounted, saveSettings]);
+        if (!isMounted) return;
+        const handler = setTimeout(() => {
+            saveSettingsToFirestore({ storeName, storeAddress });
+        }, 1000);
+        return () => clearTimeout(handler);
+    }, [storeName, storeAddress, isMounted, saveSettingsToFirestore]);
 
+    // Immediate saving for logo
     React.useEffect(() => {
-        if (isMounted && Object.keys(categories).length > 0) {
-             const debounceTimer = setTimeout(() => {
-                saveSettings({ categories: categories });
-            }, 500); // Debounce to avoid too many writes
-            return () => clearTimeout(debounceTimer);
-        }
-    }, [categories, isMounted, saveSettings]);
-    
+        if (!isMounted) return;
+        saveSettingsToFirestore({ logo });
+    }, [logo, isMounted, saveSettingsToFirestore]);
+
+    // Debounced saving for categories
+    React.useEffect(() => {
+        if (!isMounted || Object.keys(categories).length === 0) return;
+        const handler = setTimeout(() => {
+            saveSettingsToFirestore({ categories });
+        }, 1000);
+        return () => clearTimeout(handler);
+    }, [categories, isMounted, saveSettingsToFirestore]);
+
+
     if (!isMounted) {
         return (
              <div className="flex items-center justify-center min-h-screen bg-background">
@@ -149,85 +134,6 @@ export default function SettingsPage() {
             };
             reader.readAsDataURL(file);
         }
-    }
-
-    const handleBackup = () => {
-        try {
-            const dataToBackup: { [key: string]: any } = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key) {
-                    dataToBackup[key] = localStorage.getItem(key);
-                }
-            }
-
-            const jsonString = JSON.stringify(dataToBackup, null, 2);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `toko-cepat-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            toast({
-                title: "Backup Berhasil",
-                description: "Data aplikasi telah berhasil diunduh.",
-            });
-        } catch (error) {
-             console.error("Failed to backup data", error);
-            toast({
-                variant: "destructive",
-                title: "Gagal Backup",
-                description: "Terjadi kesalahan saat membuat file cadangan.",
-            });
-        }
-    }
-
-    const handleRestoreChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!event.target.files || event.target.files.length === 0) {
-            return;
-        }
-        const file = event.target.files[0];
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-            try {
-                const text = e.target?.result;
-                if (typeof text !== 'string') {
-                    throw new Error("File tidak valid.");
-                }
-                const data = JSON.parse(text);
-                
-                for (const key in data) {
-                    if (Object.prototype.hasOwnProperty.call(data, key)) {
-                        localStorage.setItem(key, data[key]);
-                    }
-                }
-                 // Dispatch a storage event to notify other components
-                window.dispatchEvent(new Event('storage'));
-
-                toast({
-                    title: "Pemulihan Berhasil",
-                    description: "Data telah dipulihkan. Muat ulang halaman untuk melihat perubahan.",
-                });
-
-                // Reload to apply changes everywhere
-                setTimeout(() => window.location.reload(), 1500);
-
-            } catch (error) {
-                console.error("Failed to restore data", error);
-                toast({
-                    variant: "destructive",
-                    title: "Gagal Memulihkan Data",
-                    description: "File cadangan tidak valid atau rusak.",
-                });
-            }
-        };
-
-        reader.readAsText(file);
     }
 
      const handleAddCategory = () => {
@@ -396,50 +302,7 @@ export default function SettingsPage() {
                     </AccordionItem>
                  ))}
             </Accordion>
-
           </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Cadangkan & Pulihkan Data</CardTitle>
-                <CardDescription>Simpan data aplikasi Anda atau pulihkan dari file cadangan.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <div>
-                    <Label className="block mb-2">Backup Data</Label>
-                    <p className="text-sm text-muted-foreground pb-2">
-                        Unduh semua data penting (stok, transaksi, pengguna, dll.) dalam satu file JSON.
-                    </p>
-                    <Button variant="outline" onClick={handleBackup}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Unduh File Backup
-                    </Button>
-                </div>
-                 <div>
-                    <Label className="block mb-2">Pulihkan Data</Label>
-                     <p className="text-sm text-muted-foreground pb-2">
-                        Pilih file backup (.json) untuk mengembalikan data aplikasi Anda.
-                    </p>
-                    <Input 
-                        id="restore" 
-                        type="file" 
-                        className="hidden" 
-                        accept=".json"
-                        ref={fileInputRef}
-                        onChange={handleRestoreChange}
-                    />
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                        <UploadCloud className="mr-2 h-4 w-4" />
-                        Pilih File & Pulihkan
-                    </Button>
-                </div>
-            </CardContent>
-            <CardFooter>
-                <p className="text-xs text-muted-foreground">
-                    Penting: Proses pemulihan akan menimpa data yang ada saat ini. Pastikan Anda memilih file yang benar.
-                </p>
-            </CardFooter>
         </Card>
       </div>
     </AdminLayout>

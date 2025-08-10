@@ -24,6 +24,8 @@ import type { InventoryItem } from "@/app/admin/inventory/page";
 import type { Customer } from "@/app/admin/customers/page";
 import { ItemSearchComboBox } from "@/components/ItemSearchComboBox";
 import { CustomerSearchComboBox } from "@/components/CustomerSearchComboBox";
+import { collection, onSnapshot, addDoc, doc, writeBatch } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 
 const itemSchema = z.object({
@@ -67,44 +69,40 @@ export default function PosPage() {
     }
   }, [router]);
 
-  const loadDataFromStorage = React.useCallback(() => {
+  // Load data from Firestore
+  React.useEffect(() => {
+    if (!isMounted) return;
+
+    const unsubInventory = onSnapshot(collection(db, "inventory"), (snapshot) => {
+        const inventoryData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InventoryItem));
+        setInventory(inventoryData);
+    });
+
+    const unsubCustomers = onSnapshot(collection(db, "customers"), (snapshot) => {
+        const customersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+        setCustomers(customersData);
+    });
+
+    return () => {
+        unsubInventory();
+        unsubCustomers();
+    }
+  }, [isMounted]);
+
+  // Sync current cart with localStorage
+  React.useEffect(() => {
+    if (!isMounted) return;
      try {
         const storedItems = localStorage.getItem("pos-items");
         if (storedItems) setItems(JSON.parse(storedItems));
-        
         const storedDiscount = localStorage.getItem("pos-discount");
         if (storedDiscount) setDiscount(JSON.parse(storedDiscount));
-        
         const storedDiscountType = localStorage.getItem("pos-discount-type");
         if (storedDiscountType) setDiscountType(JSON.parse(storedDiscountType as "percentage" | "fixed"));
-        
-        const storedInventory = localStorage.getItem("inventoryItems");
-        if (storedInventory) setInventory(JSON.parse(storedInventory));
-        
-        const storedCustomers = localStorage.getItem("customers");
-        if (storedCustomers) setCustomers(JSON.parse(storedCustomers));
-
       } catch (error) {
-        console.error("Failed to load data from localStorage", error);
-        toast({ variant: "destructive", title: "Gagal Memuat Data", description: "Tidak dapat memuat data dari penyimpanan lokal."});
+        console.error("Failed to load cart from localStorage", error);
       }
-  }, [toast]);
-
-  React.useEffect(() => {
-    if (isMounted) {
-     loadDataFromStorage();
-      // Add event listener to sync data across tabs
-      const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === "inventoryItems" || e.key === "transactions" || e.key === "customers") {
-          loadDataFromStorage();
-        }
-      };
-      window.addEventListener('storage', handleStorageChange);
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    }
-  }, [isMounted, loadDataFromStorage]);
+  }, [isMounted]);
 
   React.useEffect(() => {
     if (isMounted) localStorage.setItem("pos-items", JSON.stringify(items));
@@ -168,7 +166,6 @@ export default function PosPage() {
     }
 
     if (existingItem) {
-        // If item exists, just update its quantity
         setItems(prev => prev.map(item => 
             item.id === existingItem.id 
             ? { ...item, quantity: item.quantity + data.quantity } 
@@ -179,7 +176,6 @@ export default function PosPage() {
             description: `Jumlah ${data.name} telah diperbarui di keranjang.`,
         });
     } else {
-        // If item does not exist, add as a new item
         const newItem: Item = {
             id: data.id,
             name: data.name,
@@ -236,19 +232,21 @@ export default function PosPage() {
     setDiscountType("fixed");
     setSelectedCustomer(null);
     form.reset({ id: "", name: "", price: 0, quantity: 1 });
+    localStorage.removeItem("pos-items");
+    localStorage.removeItem("pos-discount");
+    localStorage.removeItem("pos-discount-type");
     toast({
       title: "Transaksi Baru",
       description: "Keranjang dan pelanggan telah dikosongkan.",
     });
   }
 
-  function finalizeTransaction() {
-     // 1. Save transaction to history
-    const storedTransactions = localStorage.getItem("transactions");
-    const transactions: Transaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    const newTransaction: Transaction = {
-      id: `TRX-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+  async function finalizeTransaction() {
+    const batch = writeBatch(db);
+
+    // 1. Save transaction to history
+    const newTransaction: Omit<Transaction, 'id'> = {
+      date: new Date().toISOString(),
       items: items.reduce((sum, item) => sum + item.quantity, 0),
       total: total,
       operator: sessionStorage.getItem("username") || "Unknown",
@@ -256,36 +254,35 @@ export default function PosPage() {
       customerName: selectedCustomer?.name || "Pelanggan Umum",
       details: items,
     };
-    transactions.unshift(newTransaction); // Add to the beginning of the array
-    localStorage.setItem("transactions", JSON.stringify(transactions));
-
-
+    const transactionRef = doc(collection(db, "transactions"));
+    batch.set(transactionRef, newTransaction);
+    
     // 2. Update stock in inventory
-    const newInventory = [...inventory];
-    let stockUpdated = false;
     items.forEach(cartItem => {
-        const inventoryIndex = newInventory.findIndex(invItem => invItem.id === cartItem.id);
-        if (inventoryIndex > -1) {
-            newInventory[inventoryIndex].stock -= cartItem.quantity;
-            stockUpdated = true;
+        const inventoryItem = inventory.find(invItem => invItem.id === cartItem.id);
+        if (inventoryItem) {
+            const itemRef = doc(db, "inventory", cartItem.id);
+            const newStock = inventoryItem.stock - cartItem.quantity;
+            batch.update(itemRef, { stock: newStock });
         }
     });
 
-    if (stockUpdated) {
-        setInventory(newInventory);
-        localStorage.setItem("inventoryItems", JSON.stringify(newInventory));
+    try {
+        await batch.commit();
+        handleNewTransaction();
+        setReceiptOpen(false);
+        toast({
+            title: "Transaksi Selesai",
+            description: "Stok telah diperbarui dan transaksi baru siap dimulai.",
+        });
+    } catch (error) {
+        console.error("Transaction failed: ", error);
+        toast({
+            variant: "destructive",
+            title: "Transaksi Gagal",
+            description: "Gagal menyimpan transaksi, silakan coba lagi.",
+        });
     }
-
-     // 3. Dispatch storage event to notify other tabs/components (like inventory & reports page)
-    window.dispatchEvent(new Event('storage'));
-
-    // 4. Clear current transaction for the next one
-    handleNewTransaction();
-    setReceiptOpen(false);
-    toast({
-        title: "Transaksi Selesai",
-        description: "Stok telah diperbarui dan transaksi baru siap dimulai.",
-    });
   }
   
   function handleBarcodeScanned(decodedText: string) {
